@@ -1,0 +1,79 @@
+{-# STDLIB_VERSION 5 #-}
+{-# CONTENT_TYPE DAPP #-}
+{-# SCRIPT_TYPE ACCOUNT #-}
+
+let keyAddress = "a"
+let keyType = "t"
+let keyPrecision = "p"
+
+let keyAdmin = "_a"
+
+let baseAssetSourceAndAddress = fromBase64String("V0FWRVdBVkU=")   # 0x57415645 57415645
+let baseAssetId = fromBase64String("V0FWRQ==") # 0x57415645
+
+let chainWaves = fromBase64String("V0FWRQ==") # 0x57415645
+
+let errUnauthorized = "unauthorized"
+let errAlreadyExists = "exists"
+let errInvalidValues = "invalid values"
+
+let typeBase = 0
+let typeNative = 1
+let typeWrapped = 2
+
+func invalidCaller(i: Invocation, key: String) = {
+    match getBinary(key) {
+        case authority: ByteVector => (authority != i.caller.bytes)
+        case _ => false
+    }
+}
+
+@Callable(i)
+func setAdmin(newAdmin: ByteVector) = {
+    if (invalidCaller(i, keyAdmin)) 
+        then throw(errUnauthorized) 
+        else [BinaryEntry(keyAdmin, newAdmin)]
+}
+
+@Callable(i)
+func addAsset(
+    assetSourceAndAddress: ByteVector,  # First 4 bytes are token source, then up to 32 byte address
+    assetId: ByteVector,
+    type: Int,
+    name: String, # Only required if creating wrapped tokens
+    description: String, # Only required if creating wrapped tokens
+    precision: Int) = {
+    if (invalidCaller(i, keyAdmin)) then throw(errUnauthorized) else 
+
+    let (actions, assetNativeId) = if (type == typeBase) then {
+        # Check values for the base coin
+        if (assetSourceAndAddress != baseAssetSourceAndAddress || assetId != baseAssetId || precision != 8) 
+            then throw(errInvalidValues)
+            else ([], assetId)
+    } else if (type == typeNative) then {
+        # Just return supplied value if native
+        ([], assetId)
+    } else if (type == typeWrapped) then {
+        # Issue new token only if no asset ID is supplied
+        if (assetId.size() == 0)
+            then {
+                let issue = Issue(name, description, 0, precision, true)
+                ([issue], calculateAssetId(issue))
+            } 
+            else ([], assetId)
+    } else throw(errInvalidValues)
+    
+    let keySourceBase = toBase64String(assetSourceAndAddress)
+    let keyNativeBase = toBase64String(assetNativeId)
+
+    let keySourceAddress = [keySourceBase, keyAddress].makeString(".")
+    let keyNativeAddress = [keyNativeBase, keyAddress].makeString(".")
+    if (getBinary(keySourceAddress).isDefined() || getBinary(keyNativeAddress).isDefined())
+        then throw(errAlreadyExists)
+        else actions ++ [
+            BinaryEntry(keySourceAddress, assetNativeId),
+            BinaryEntry(keyNativeAddress, assetSourceAndAddress),
+            IntegerEntry([keyNativeBase, keyType].makeString("."), type),
+            IntegerEntry([keyNativeBase, keyPrecision].makeString("."), precision)
+        ]
+}
