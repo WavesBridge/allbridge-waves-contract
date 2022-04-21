@@ -1,0 +1,81 @@
+{-# STDLIB_VERSION 5 #-}
+{-# CONTENT_TYPE DAPP #-}
+{-# SCRIPT_TYPE ACCOUNT #-}
+
+let keyVersion = "_v"   # Binary version number
+let keyBridge = "_b"    # Bridge contract address, only bridge can call validator
+let keyOracle = "_o"    # 64-byte oracle pubkey
+let keyAdmin = "_a"     # Admin address
+
+let errUnauthorized = "unauthorized"
+let errInvalidSignature = "invalid signature"
+let errAlreadyClaimed = "claimed"
+let errBridgeOnly = "not bridge"
+
+func invalidCaller(i: Invocation, key: String) = {
+    match getBinary(key) {
+        case authority: ByteVector => (authority != i.caller.bytes)
+        case _ => false
+    }
+}
+
+@Callable(i)
+func setAdmin(newAdmin: ByteVector) = {
+    if (invalidCaller(i, keyAdmin)) 
+        then throw(errUnauthorized) 
+        else [BinaryEntry(keyAdmin, newAdmin)]
+}
+
+@Callable(i)
+func setConfig(version: ByteVector, bridge: ByteVector, oracle: ByteVector) = {
+    if (invalidCaller(i, keyAdmin)) 
+        then throw(errUnauthorized) 
+        else [
+            BinaryEntry(keyVersion, version),
+            BinaryEntry(keyBridge, bridge),
+            BinaryEntry(keyOracle, oracle)
+        ]
+}
+
+@Callable(i)
+func createUnlock(
+    lockId: ByteVector,
+    recipient: ByteVector,
+    amount: Int,
+    lockSource: ByteVector,
+    tokenSourceAndAddress: ByteVector,
+    signature: ByteVector
+) = {
+    # Check lock ID length and version
+    # Check caller, must be bridge contract
+    if (invalidCaller(i, keyBridge)) 
+        then throw(errBridgeOnly)
+        else 
+    # Check if unlock was already created
+    let lockIdAsString = lockId.toBase64String();
+    let lockSourceAsString = lockSource.toBase64String();
+    let unlockKey = [lockSourceAsString, lockIdAsString].makeString(".")
+    if (isDefined(getBoolean(unlockKey)))
+        then throw(errAlreadyClaimed)
+        else
+
+    # Construct message
+    let message = [
+        lockIdAsString,
+        recipient.toBase64String(),
+        amount.toString(),
+        lockSourceAsString,
+        tokenSourceAndAddress.toBase64String()
+    ].makeString(".")
+    
+    # Check signature
+    let hash = message.toBytes().keccak256()
+    let recoveredKey = ecrecover(hash, signature)
+    if (recoveredKey != getBinaryValue(keyOracle))
+        then throw(errInvalidSignature)
+        else {
+            # Save unlock
+            ([BooleanEntry(unlockKey, true)], true)
+        }
+}
+

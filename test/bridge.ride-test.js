@@ -29,30 +29,25 @@ describe('Bridge', async function () {
         const script = compile(file('bridge.ride'));
         const ssTx = setScript({script}, accounts.bridge);
         await broadcast(ssTx);
-        await waitForTx(ssTx.id)
-        console.log('Script has been set')
+        await waitForTx(ssTx.id);
+        console.log('Script has been set');
 
         ASSET_NATIVE_ID = Buffer.from(wavesCrypto.base58Decode(address(accounts.token))).toString("base64");
         ADMIN = Buffer.from(wavesCrypto.base58Decode(address(accounts.admin))).toString("base64");
         ALICE = Buffer.from(wavesCrypto.base58Decode(address(accounts.alice))).toString("base64");
-        console.log(`Token b64: ${ASSET_NATIVE_ID}`)
-        console.log(`Admin b64: ${ADMIN}`)
-        console.log(`Alice b64: ${ALICE}`)
+        console.log(`Token b64: ${ASSET_NATIVE_ID}`);
+        console.log(`Admin b64: ${ADMIN}`);
+        console.log(`Alice b64: ${ALICE}`);
 
         const adminTx = invokeScript({
             dApp: address(accounts.bridge),
-            call: {
-                function: "setAdmin",
-                args: [
-                    {type:'binary', value: ADMIN}
-                ]
-            },
+            call: {function: "setAdmin", args: [{type:'binary', value: ADMIN}]},
         }, accounts.admin);
 
         await broadcast(adminTx);
         await waitForTx(adminTx.id);
 
-        console.log('Admin set')
+        console.log('Admin set');
     });
 
     it('set admin', async function () {
@@ -60,12 +55,7 @@ describe('Bridge', async function () {
         // Unauthorized to set new admin
         const txFail = invokeScript({
             dApp: address(accounts.bridge),
-            call: {
-                function: "setAdmin",
-                args: [
-                    {type:'binary', value: ALICE}
-                ]
-            },
+            call: {function: "setAdmin", args: [{type:'binary', value: ALICE}]},
         }, accounts.alice);
 
         expect(broadcast(txFail)).to.be.rejectedWith("unauthorized")
@@ -73,12 +63,7 @@ describe('Bridge', async function () {
         // Successful admin change
         const txSuccess = invokeScript({
             dApp: address(accounts.bridge),
-            call: {
-                function: "setAdmin",
-                args: [
-                    {type:'binary', value: ALICE}
-                ]
-            },
+            call: {function: "setAdmin", args: [{type:'binary', value: ALICE}]},
         }, accounts.admin);
 
         await broadcast(txSuccess);
@@ -91,12 +76,7 @@ describe('Bridge', async function () {
         // Failure to change back
         const txFail1 = invokeScript({
             dApp: address(accounts.bridge),
-            call: {
-                function: "setAdmin",
-                args: [
-                    {type:'binary', value: ALICE}
-                ]
-            },
+            call: {function: "setAdmin", args: [{type:'binary', value: ALICE}]},
         }, accounts.admin);
 
         expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized")
@@ -104,12 +84,7 @@ describe('Bridge', async function () {
         // Successful change back
         const txSuccess1 = invokeScript({
             dApp: address(accounts.bridge),
-            call: {
-                function: "setAdmin",
-                args: [
-                    {type:'binary', value: ADMIN}
-                ]
-            },
+            call: {function: "setAdmin", args: [{type:'binary', value: ADMIN}]},
         }, accounts.alice);
 
         await broadcast(txSuccess1);
