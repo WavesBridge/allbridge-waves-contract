@@ -70,6 +70,7 @@ func createUnlock(
     
     # Check signature
     let hash = message.toBytes().keccak256()
+    
     let recoveredKey = ecrecover(hash, signature)
     if (recoveredKey != getBinaryValue(keyOracle))
         then throw(errInvalidSignature)

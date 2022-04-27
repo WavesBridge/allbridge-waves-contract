@@ -39,7 +39,7 @@ describe('Validator', async function () {
 
         // Calculate oracle public key
         const publicKey = eth.privateToPublic(oracle).toString("base64");
-
+        
         const configTx = invokeScript({
             dApp: address(accounts.validator),
             call: {function: "setConfig", args: [
