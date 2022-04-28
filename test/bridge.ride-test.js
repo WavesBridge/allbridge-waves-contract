@@ -1,8 +1,13 @@
 const wvs = 10 ** 8;
 
-const ASSET_SOURCE = Buffer.from("POL\0")
-const ASSET_ADDRESS = Buffer.from("1122334455667788990011223344556677889900", "hex")
-const ASSET_SOURCE_AND_ADDRESS = Buffer.concat([ASSET_SOURCE, ASSET_ADDRESS]).toString("base64")
+const NATIVE_ASSET_SOURCE = Buffer.from("POL\0")
+const NATIVE_ASSET_ADDRESS = Buffer.from("1122334455667788990011223344556677889900", "hex")
+const NATIVE_ASSET_SOURCE_AND_ADDRESS = Buffer.concat([NATIVE_ASSET_SOURCE, NATIVE_ASSET_ADDRESS]).toString("base64")
+const NATIVE_ASSET_ID="TkFU"
+
+const WRAPPED_ASSET_SOURCE = Buffer.from("WAVE")
+const WRAPPED_ASSET_ADDRESS = Buffer.from("1122334455667788990011223344556677889900", "hex")
+const WRAPPED_ASSET_SOURCE_AND_ADDRESS = Buffer.concat([WRAPPED_ASSET_SOURCE, WRAPPED_ASSET_ADDRESS]).toString("base64")
 
 const TYPE_BASE = 0;
 const TYPE_NATIVE = 1;
@@ -22,9 +27,9 @@ describe('Bridge', async function () {
     before(async function () {
         await setupAccounts({
             bridge: 0.05 * wvs,
-            admin: 0.05 * wvs,
+            admin: (10 * wvs).toString(),
             token: 0.05 * wvs,
-            alice: 0.05 * wvs,
+            alice: (10 * wvs).toString(),
         });
         const script = compile(file('bridge.ride'));
         const ssTx = setScript({script}, accounts.bridge);
@@ -121,7 +126,7 @@ describe('Bridge', async function () {
 
         // Wrong source/address
         paramsFail = JSON.parse(JSON.stringify(params));
-        paramsFail.call.args[0].value = ASSET_SOURCE_AND_ADDRESS;  
+        paramsFail.call.args[0].value = NATIVE_ASSET_SOURCE_AND_ADDRESS;  
         const txFailSourceAndAddress = invokeScript(paramsFail, accounts.admin);
         expect(broadcast(txFailSourceAndAddress)).to.be.rejectedWith("invalid values");
 
@@ -143,16 +148,102 @@ describe('Bridge', async function () {
         let recordNative = await accountDataByKey(`${BASE_ASSET_ID}.a`, address(accounts.bridge));
         expect(recordNative.value).to.be.equal(`base64:${BASE_ASSET_SOURCE_AND_ADDRESS}`);
 
+        let recordType = await accountDataByKey(`${BASE_ASSET_ID}.t`, address(accounts.bridge));
+        expect(recordType.value).to.be.equal(TYPE_BASE);
+
+        let recordPrecision = await accountDataByKey(`${BASE_ASSET_ID}.p`, address(accounts.bridge));
+        expect(recordPrecision.value).to.be.equal(8);
+
         // Adding the same token again
         const txFail2 = invokeScript(params, accounts.admin);
         expect(broadcast(txFail2)).to.be.rejectedWith("exists");
     })
 
-    it('add asset (base)', async function () {
-        // TODO:
+    it('add asset (native)', async function () {
+        const params = {
+            dApp: address(accounts.bridge),
+            call: {
+                function: "addAsset",
+                args: [
+                    {type:'binary', value: NATIVE_ASSET_SOURCE_AND_ADDRESS},
+                    {type:'binary', value: NATIVE_ASSET_ID},
+                    {type:'integer', value: TYPE_NATIVE},
+                    {type:'string', value: ""},
+                    {type:'string', value: ""},
+                    {type:'integer', value: 8},
+                ]
+            },
+        };
+
+        // Wrong signer
+        const txFail1 = invokeScript(params, accounts.alice);
+        expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
+
+        // Successfully added
+        const tx = invokeScript(params, accounts.admin);
+
+        await broadcast(tx);
+        await waitForTx(tx.id);
+
+        let recordSource = await accountDataByKey(`${NATIVE_ASSET_SOURCE_AND_ADDRESS}.a`, address(accounts.bridge));
+        expect(recordSource.value).to.be.equal(`base64:${NATIVE_ASSET_ID}`);
+
+        let recordNative = await accountDataByKey(`${NATIVE_ASSET_ID}.a`, address(accounts.bridge));
+        expect(recordNative.value).to.be.equal(`base64:${NATIVE_ASSET_SOURCE_AND_ADDRESS}`);
+
+        let recordType = await accountDataByKey(`${NATIVE_ASSET_ID}.t`, address(accounts.bridge));
+        expect(recordType.value).to.be.equal(TYPE_NATIVE);
+
+        let recordPrecision = await accountDataByKey(`${NATIVE_ASSET_ID}.p`, address(accounts.bridge));
+        expect(recordPrecision.value).to.be.equal(8);
+
+        // Adding the same token again
+        const txFail2 = invokeScript(params, accounts.admin);
+        expect(broadcast(txFail2)).to.be.rejectedWith("exists");
     });
 
     it('add asset (wrapped)', async function () {
-        // TODO:
+        const params = {
+            dApp: address(accounts.bridge),
+            call: {
+                function: "addAsset",
+                args: [
+                    {type:'binary', value: WRAPPED_ASSET_SOURCE_AND_ADDRESS},
+                    {type:'binary', value: ""},
+                    {type:'integer', value: TYPE_WRAPPED},
+                    {type:'string', value: "Wrapped name"},
+                    {type:'string', value: "Wrapped description"},
+                    {type:'integer', value: 6},
+                ]
+            },
+            fee: "100500000"
+        };
+
+        // Wrong signer
+        const txFail1 = invokeScript(params, accounts.alice);
+        expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
+
+        // Successfully added
+        const tx = invokeScript(params, accounts.admin);
+
+        await broadcast(tx);
+        await waitForTx(tx.id);
+
+        const recordSource = await accountDataByKey(`${WRAPPED_ASSET_SOURCE_AND_ADDRESS}.a`, address(accounts.bridge));
+        const wrappedAssetId = recordSource.value.replace('base64:', '');
+        expect(wrappedAssetId.value).not.to.be.equal('');
+
+        let recordNative = await accountDataByKey(`${wrappedAssetId}.a`, address(accounts.bridge));
+        expect(recordNative.value).to.be.equal(`base64:${WRAPPED_ASSET_SOURCE_AND_ADDRESS}`);
+
+        let recordType = await accountDataByKey(`${wrappedAssetId}.t`, address(accounts.bridge));
+        expect(recordType.value).to.be.equal(TYPE_WRAPPED);
+
+        let recordPrecision = await accountDataByKey(`${wrappedAssetId}.p`, address(accounts.bridge));
+        expect(recordPrecision.value).to.be.equal(6);
+
+        // Adding the same token again
+        const txFail2 = invokeScript(params, accounts.admin);
+        expect(broadcast(txFail2)).to.be.rejectedWith("exists");
     });
 })
