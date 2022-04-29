@@ -2,20 +2,49 @@
 {-# CONTENT_TYPE DAPP #-}
 {-# SCRIPT_TYPE ACCOUNT #-}
 
+func keyLock(lockId: ByteVector, key: String) = {[lockId.toBase64String(), key].makeString(".")}
+func keyLockRecipient(lockId: ByteVector) = keyLock(lockId, "l.r") # Lock recipient
+func keyLockAmount(lockId: ByteVector) = keyLock(lockId, "l.a") # Lock amount
+func keyLockDestination(lockId: ByteVector) = keyLock(lockId, "l.d") # Lock destination
+func keyLockTokenSource(lockId: ByteVector) = keyLock(lockId, "l.ts")  # Lock token source and address
+
 let keyVersion = "_v"   # Binary version number
 let keyBridge = "_b"    # Bridge contract address, only bridge can call validator
 let keyOracle = "_o"    # 64-byte oracle pubkey
 let keyAdmin = "_a"     # Admin address
 
 let errUnauthorized = "unauthorized"
+let errUninitialized = "uninitialized"
 let errInvalidSignature = "invalid signature"
 let errAlreadyClaimed = "claimed"
+let errAlreadyLocked = "locked"
 let errBridgeOnly = "not bridge"
+let errInvalidLockId = "invalid lockId"
 
 func invalidCaller(i: Invocation, key: String) = {
     match getBinary(key) {
         case authority: ByteVector => (authority != i.caller.bytes)
         case _ => false
+    }
+}
+
+func assertCallerIsBridge(i: Invocation) = {
+    if (invalidCaller(i, keyBridge)) 
+        then throw(errBridgeOnly)
+        else unit
+}
+
+func assertValidLockId(lockId: ByteVector) = {
+    let version = getBinary(keyVersion).valueOrErrorMessage(errUninitialized)
+    if (lockId.size() != 16 || lockId.take(1) != version) 
+        then throw(errInvalidLockId)
+        else unit
+}
+
+func assertLockNotExists(lockId: ByteVector) = {
+    match (getBinary(keyLockRecipient(lockId))) {
+        case t: ByteVector => throw(errAlreadyLocked)
+        case _ => unit
     }
 }
 
@@ -45,12 +74,10 @@ func createUnlock(
     lockSource: ByteVector,
     tokenSourceAndAddress: ByteVector,
     signature: ByteVector
-) = {
-    # Check lock ID length and version
+) = {    
+    strict checkLockId = assertValidLockId(lockId)
     # Check caller, must be bridge contract
-    if (invalidCaller(i, keyBridge)) 
-        then throw(errBridgeOnly)
-        else 
+    strict checkCaller = assertCallerIsBridge(i)
     # Check if unlock was already created
     let lockIdAsString = lockId.toBase64String();
     let lockSourceAsString = lockSource.toBase64String();
@@ -61,10 +88,10 @@ func createUnlock(
 
     # Construct message
     let message = [
-        lockIdAsString,
+        lockId.toBase64String(),
         recipient.toBase64String(),
         amount.toString(),
-        lockSourceAsString,
+        lockSource.toBase64String(),
         tokenSourceAndAddress.toBase64String()
     ].makeString(".")
     
@@ -80,3 +107,24 @@ func createUnlock(
         }
 }
 
+
+@Callable(i)
+func createLock(
+    lockId: ByteVector,
+    recipient: ByteVector,
+    amount: Int,
+    lockDestination: ByteVector,
+    tokenSourceAndAddress: ByteVector
+) = {
+    
+    strict checkLockId = assertValidLockId(lockId)
+    strict checkLock = assertLockNotExists(lockId)
+    strict checkCaller = assertCallerIsBridge(i)
+
+    [
+        BinaryEntry(keyLockRecipient(lockId), recipient),
+        IntegerEntry(keyLockAmount(lockId), amount),
+        BinaryEntry(keyLockDestination(lockId), lockDestination),
+        BinaryEntry(keyLockTokenSource(lockId), tokenSourceAndAddress)
+    ]
+}

@@ -2,7 +2,61 @@
 {-# CONTENT_TYPE DAPP #-}
 {-# SCRIPT_TYPE ACCOUNT #-}
 
+let keyAddress = "a"
+let keyAdmin = "_a"
+let keyAssets = "_as"
+let keyValidator = "_v"
+let keyType = "t"
+let keyPrecision = "p"
+
+let baseAssetId = fromBase64String("V0FWRQ==") # 0x57415645
+
+let errTransactionType = "wrong transaction type"
+let errInitialized = "initialized"
+let errUninitialized = "uninitialized"
+let errUnauthorized = "unauthorized"
+let errNotOnePayment = "not one payment"
+let errInvalidType = "invalid type"
+let errAssetNotFound = "asset not found"
+
+let typeBase = 0
+let typeNative = 1
+let typeWrapped = 2
+
+func assertCallerIsAdmin(i: Invocation) = {
+    let assetAddress = valueOrErrorMessage(getBinary(keyAssets), errUninitialized)
+    match getBinary(Address(assetAddress), keyAdmin) {
+        case authority: ByteVector => if (authority != i.caller.bytes) 
+                                        then throw(errUnauthorized) 
+                                        else unit
+        case _ => throw(errUninitialized)
+    }
+}
+
 @Callable(i)
-func testCall(contractAddress: ByteVector) = {
+func setConfig(assetsAddress: ByteVector, validatorAddress: ByteVector) = {
+    strict callerCheck = match getBinary(keyAssets) {
+        case v: ByteVector => assertCallerIsAdmin(i)
+        case _ => unit
+    }
+    [BinaryEntry(keyAssets, assetsAddress),
+    BinaryEntry(keyValidator, validatorAddress)]
+}
+
+
+@Callable(i)
+func lock(lockId: ByteVector, recipient: ByteVector, destination: ByteVector) = {
+    if (size(i.payments) != 1) 
+        then throw(errNotOnePayment) 
+        else 
+    let assetId = valueOrElse(i.payments[0].assetId, baseAssetId)
+    let amount = i.payments[0].amount
+    let keyNativeBase = toBase64String(assetId)
+    let assetAddress = valueOrErrorMessage(getBinary(keyAssets), errUninitialized)
+    let validatorAddress = valueOrErrorMessage(getBinary(keyValidator), errUninitialized)
+
+    let tokenSourceAndAddress = getBinary(Address(assetAddress), [keyNativeBase, keyAddress].makeString(".")).valueOrErrorMessage(errAssetNotFound)
+    strict createLock = invoke(Address(validatorAddress), "createLock", [lockId, recipient, amount, destination, tokenSourceAndAddress], [])
+
     []
 }
