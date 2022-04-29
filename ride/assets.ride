@@ -93,6 +93,7 @@ func removeAsset(
         case assetNativeId: ByteVector => assetNativeId
         case _ => throw(errNotExists)
       }
+
     let keyNativeBase = toBase64String(assetNativeId)
     let keyNativeAddress = [keyNativeBase, keyAddress].makeString(".")
 
@@ -105,16 +106,20 @@ func removeAsset(
     let actions = if (type == typeBase) then {
         # Transfer all WAVES to ne authority
         let balance = wavesBalance(this)
-        [ScriptTransfer(Address(newAuthority), balance.available, unit)]
+        if (balance.available > 0)
+            then [ScriptTransfer(Address(newAuthority), balance.available, unit)]
+            else []
     } else if (type == typeNative) then {
         # Transfer all assets to new authority
         let balance = assetBalance(this, assetNativeId)
-        [ScriptTransfer(Address(newAuthority), balance, assetNativeId)]
+        if (balance > 0) 
+            then [ScriptTransfer(Address(newAuthority), balance, assetNativeId)]
+            else []
     } else if (type == typeWrapped) then {
         # Chenge asset issuer
         []
     } else throw(errInvalidValues)
-    # strict res = invoke(Address(newAuthority), "testCall", [newAuthority], [])
+    
     actions ++ [
         DeleteEntry(keySourceAddress),
         DeleteEntry(keyNativeAddress),

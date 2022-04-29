@@ -13,6 +13,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@waves/ts-lib-crypto": "^1.4.4-beta.1",
+    "@waves/js-test-env": "^1.1.4",
     "ethereumjs-util": "^7.1.4"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.1",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "^17.0.30"
   }
 }

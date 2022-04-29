@@ -3,7 +3,7 @@ function accountSeedToBase64(accountSeed) {
 }
 
 function base58ToBase64(value) {
-    return Buffer.from(wavesCrypto.base58Decode(value)).toString("base64"); 
+    return base64Encode(base58Decode(value)); 
 }
 
 function toWavelet(amount) {
