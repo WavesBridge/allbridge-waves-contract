@@ -353,4 +353,45 @@ describe('Assets', async function () {
         const txFail2 = invokeScript(params, accounts.admin);
         expect(broadcast(txFail2)).rejectedWith("not exists");
     })
+
+    it('remove (wrapped)', async () => {
+        const params = {
+            dApp: address(accounts.assets),
+            call: {
+                function: "removeAsset",
+                args: [
+                    {type:'binary', value: WRAPPED_ASSET_SOURCE_AND_ADDRESS},
+                    {type:'binary', value: NEW_OWNER}
+                ]
+            }
+        };
+
+        const recordSourceBefore = await accountDataByKey(`${WRAPPED_ASSET_SOURCE_AND_ADDRESS}.a`, address(accounts.assets));
+        const wrappedAssetId = recordSourceBefore.value.replace('base64:', '');
+
+        // Wrong signer
+        const txFail1 = invokeScript(params, accounts.alice);
+        expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
+
+        // Successfully added
+        const tx = invokeScript(params, accounts.admin);
+
+        await broadcastAndWait(tx);
+
+        let recordSource = await accountDataByKey(`${WRAPPED_ASSET_SOURCE_AND_ADDRESS}.a`, address(accounts.assets));
+        expect(recordSource).equal(null);
+
+        let recordNative = await accountDataByKey(`${wrappedAssetId}.a`, address(accounts.assets));
+        expect(recordNative).equal(null);
+
+        let recordType = await accountDataByKey(`${wrappedAssetId}.t`, address(accounts.assets));
+        expect(recordType).equal(null);
+
+        let recordPrecision = await accountDataByKey(`${wrappedAssetId}.p`, address(accounts.assets));
+        expect(recordPrecision).equal(null);
+      
+        // Remove the same token again
+        const txFail2 = invokeScript(params, accounts.admin);
+        expect(broadcast(txFail2)).rejectedWith("not exists");
+    })
 })

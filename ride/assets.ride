@@ -89,19 +89,13 @@ func removeAsset(
     let keySourceBase = toBase64String(assetSourceAndAddress)
     let keySourceAddress = [keySourceBase, keyAddress].makeString(".")
 
-    let assetNativeId = match (getBinary(keySourceAddress)) {
-        case assetNativeId: ByteVector => assetNativeId
-        case _ => throw(errNotExists)
-      }
+    let assetNativeId = valueOrErrorMessage(getBinary(keySourceAddress), errNotExists)
 
     let keyNativeBase = toBase64String(assetNativeId)
     let keyNativeAddress = [keyNativeBase, keyAddress].makeString(".")
 
     let keyAssetType = [keyNativeBase, keyType].makeString(".")
-    let type = match (getInteger(keyAssetType)) {
-        case type: Int => type
-        case _ => throw(errNotExists)
-      }
+    let type = valueOrErrorMessage(getInteger(keyAssetType), errNotExists)
 
     let actions = if (type == typeBase) then {
         # Transfer all WAVES to ne authority
