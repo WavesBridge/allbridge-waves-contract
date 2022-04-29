@@ -29,11 +29,16 @@ func invalidCaller(i: Invocation, key: String) = {
     }
 }
 
+func assertCallerIsAdmin(i: Invocation) = {
+    if (invalidCaller(i, keyAdmin)) 
+        then throw(errUnauthorized)
+        else unit
+}
+
 @Callable(i)
 func setAdmin(newAdmin: ByteVector) = {
-    if (invalidCaller(i, keyAdmin)) 
-        then throw(errUnauthorized) 
-        else [BinaryEntry(keyAdmin, newAdmin)]
+    strict callerCheck = assertCallerIsAdmin(i)
+    [BinaryEntry(keyAdmin, newAdmin)]
 }
 
 @Callable(i)
@@ -44,7 +49,8 @@ func addAsset(
     name: String, # Only required if creating wrapped tokens
     description: String, # Only required if creating wrapped tokens
     precision: Int) = {
-    if (invalidCaller(i, keyAdmin)) then throw(errUnauthorized) else 
+
+    strict callerCheck = assertCallerIsAdmin(i)
 
     let (actions, assetNativeId) = if (type == typeBase) then {
         # Check values for the base coin
@@ -84,7 +90,7 @@ func removeAsset(
     assetSourceAndAddress: ByteVector,  # First 4 bytes are token source, then up to 32 byte address
     newAuthority: ByteVector
 ) = {
-    if (invalidCaller(i, keyAdmin)) then throw(errUnauthorized) else 
+    strict callerCheck = assertCallerIsAdmin(i)
     
     let keySourceBase = toBase64String(assetSourceAndAddress)
     let keySourceAddress = [keySourceBase, keyAddress].makeString(".")
