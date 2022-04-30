@@ -1,5 +1,5 @@
 const { base64Decode, base58Decode } = require('@waves/ts-lib-crypto');
-const {accountSeedToBase64, toWavelet, broadcastAndWait, base58ToBase64} = require('./utils');
+const {accountSeedToBase64, toWavelet, broadcastAndWait, base58ToBase64, initValidatorContract, initBridgeContract} = require('./utils');
 const eth = require('ethereumjs-util');
 
 const NATIVE_ASSET_SOURCE = Buffer.from("POL\0")
@@ -25,7 +25,6 @@ describe('Assets', async function () {
     let NATIVE_ASSET_ID_B58 = "";
     let ADMIN = "";
     let ALICE = "";
-    let ASSETS = "";
     let NEW_OWNER = "";
     let VALIDATOR = "";
     let BRIDGE = "";
@@ -33,7 +32,6 @@ describe('Assets', async function () {
 
     before(async function () {
         await setupAccounts({
-            assets: toWavelet(10),
             bridge: toWavelet(10),
             validator: toWavelet(10),
             admin: toWavelet(10),
@@ -43,43 +41,13 @@ describe('Assets', async function () {
         });
         ADMIN = accountSeedToBase64(accounts.admin);
         ALICE = accountSeedToBase64(accounts.alice);
-        ASSETS = accountSeedToBase64(accounts.assets)
         VALIDATOR = accountSeedToBase64(accounts.validator)
         NEW_OWNER = accountSeedToBase64(accounts.newOwner);
         BRIDGE = accountSeedToBase64(accounts.bridge);
 
-        const assetScript = compile(file('assets.ride'));
-        const asTx = setScript({script: assetScript}, accounts.assets);
-        await broadcastAndWait(asTx);
-
-        const brindgeScript = compile(file('bridge.ride'));
-        const bsTx = setScript({script: brindgeScript}, accounts.bridge);
-        await broadcastAndWait(bsTx);
-
-        const validatorScript = compile(file('validator.ride'));
-        const vsTx = setScript({script: validatorScript}, accounts.validator);
-        await broadcastAndWait(vsTx);
         const oraclePublicKey = eth.privateToPublic(Buffer.from(oracle)).toString("base64");
-        
-        const setTx = await invoke({
-            dApp: address(accounts.validator),
-            functionName: 'setConfig',
-            arguments: [[1], {type:'binary', value: BRIDGE}, {type:'binary', value: oraclePublicKey}]
-        }, accounts.admin)
-        await waitForTx(setTx.id);
-
-        console.log('Script has been set');
-
-        const adminTx = invokeScript({
-            dApp: address(accounts.assets),
-            call: {function: "setAdmin", args: [{type:'binary', value: ADMIN}]},
-        }, accounts.admin);
-
-        await broadcastAndWait(adminTx);
-        await broadcastAndWait(invokeScript({
-            dApp: address(accounts.bridge),
-            call: {function: "setConfig", args: [{type:'binary', value: ASSETS}, {type:'binary', value: VALIDATOR}]},
-        }, accounts.admin));
+        await initValidatorContract(oraclePublicKey);
+        await initBridgeContract();
 
         const issueTx = issue({
             description: "Test token", 
@@ -94,20 +62,20 @@ describe('Assets', async function () {
         NATIVE_ASSET_ID = base58ToBase64(NATIVE_ASSET_ID_B58)
         await broadcastAndWait(transfer({
             amount: toWavelet(5),
-            recipient: address(accounts.assets),
+            recipient: address(accounts.bridge),
             assetId: NATIVE_ASSET_ID_B58
         }, accounts.token));
 
         console.log('Admin set');
     });
 
-    it('set assets', async function () {
+    it('set config', async function () {
         // TODO
     })
 
     it('lock', async function () {
 
-        const addTokenTx = await invoke({dApp: address(accounts.assets), functionName: 'addAsset', arguments: [
+        const addTokenTx = await invoke({dApp: address(accounts.bridge), functionName: 'addAsset', arguments: [
             base64Decode(BASE_ASSET_SOURCE_AND_ADDRESS), base64Decode(BASE_ASSET_ID), TYPE_BASE, "", "", 8
         ]}, accounts.admin);
         await waitForTx(addTokenTx.id);
@@ -115,13 +83,23 @@ describe('Assets', async function () {
         const lockId = Buffer.from(new Array(16).fill(1))
         const recipient = Buffer.from(new Array(32).fill(2));
         const destination = Buffer.from("ETH\0");
+        const amount = toWavelet(0.12)
 
-        const lockTs = await invoke({
+        const bridgeBalanceBefore = await balance(address(accounts.bridge));
+        const userBalanceBefore = await balance(address(accounts.alice));
+
+        const lockTx = await invoke({
             dApp: address(accounts.bridge), 
             functionName: 'lock',
             arguments: [lockId, recipient, destination],
-            payment: toWavelet(0.01)
+            payment: amount
         }, accounts.alice);
-        await waitForTx(lockTs.id);
+        await waitForTx(lockTx.id);
+
+        const bridgeBalanceAfter = await balance(address(accounts.bridge));
+        const userBalanceAfter = await balance(address(accounts.alice));
+
+        expect(bridgeBalanceAfter).equal(bridgeBalanceBefore + amount);
+        expect(userBalanceAfter).equal(userBalanceBefore - amount - lockTx.fee);
     })
 })

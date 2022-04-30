@@ -2,61 +2,152 @@
 {-# CONTENT_TYPE DAPP #-}
 {-# SCRIPT_TYPE ACCOUNT #-}
 
-let keyAddress = "a"
+let keyAddress = "_aa"
+let keyType = "_at"
+let keyPrecision = "_ap"
+
 let keyAdmin = "_a"
-let keyAssets = "_as"
 let keyValidator = "_v"
-let keyType = "t"
-let keyPrecision = "p"
 
-let baseAssetId = fromBase64String("V0FWRQ==") # 0x57415645
+let baseAssetSourceAndAddress = base64'V0FWRVdBVkU='   # 0x57415645 57415645
+let baseAssetId = base64'V0FWRQ==' # 0x57415645
 
-let errTransactionType = "wrong transaction type"
-let errInitialized = "initialized"
-let errUninitialized = "uninitialized"
+let chainWaves = base64'V0FWRQ==' # 0x57415645
+
 let errUnauthorized = "unauthorized"
+let errUninitialized = "uninitialized"
+let errAlreadyExists = "exists"
+let errNotExists = "not exists"
+let errInvalidValues = "invalid values"
 let errNotOnePayment = "not one payment"
-let errInvalidType = "invalid type"
 let errAssetNotFound = "asset not found"
 
 let typeBase = 0
 let typeNative = 1
 let typeWrapped = 2
 
-func assertCallerIsAdmin(i: Invocation) = {
-    let assetAddress = valueOrErrorMessage(getBinary(keyAssets), errUninitialized)
-    match getBinary(Address(assetAddress), keyAdmin) {
-        case authority: ByteVector => if (authority != i.caller.bytes) 
-                                        then throw(errUnauthorized) 
-                                        else unit
-        case _ => throw(errUninitialized)
+func invalidCaller(i: Invocation, key: String) = {
+    match getBinary(key) {
+        case authority: ByteVector => (authority != i.caller.bytes)
+        case _ => false
     }
 }
 
+func assertCallerIsAdmin(i: Invocation) = {
+    if (invalidCaller(i, keyAdmin)) 
+        then throw(errUnauthorized)
+        else unit
+}
+
 @Callable(i)
-func setConfig(assetsAddress: ByteVector, validatorAddress: ByteVector) = {
-    strict callerCheck = match getBinary(keyAssets) {
-        case v: ByteVector => assertCallerIsAdmin(i)
-        case _ => unit
-    }
-    [BinaryEntry(keyAssets, assetsAddress),
+func setConfig(newAdmin: ByteVector, validatorAddress: ByteVector) = {
+    strict callerCheck = assertCallerIsAdmin(i)
+    [BinaryEntry(keyAdmin, newAdmin),
     BinaryEntry(keyValidator, validatorAddress)]
 }
 
+@Callable(i)
+func addAsset(
+    assetSourceAndAddress: ByteVector,  # First 4 bytes are token source, then up to 32 byte address
+    assetId: ByteVector,
+    type: Int,
+    name: String, # Only required if creating wrapped tokens
+    description: String, # Only required if creating wrapped tokens
+    precision: Int) = {
+
+    strict callerCheck = assertCallerIsAdmin(i)
+
+    let (actions, assetNativeId) = if (type == typeBase) then {
+        # Check values for the base coin
+        if (assetSourceAndAddress != baseAssetSourceAndAddress || assetId != baseAssetId || precision != 8) 
+            then throw(errInvalidValues)
+            else ([], assetId)
+    } else if (type == typeNative) then {
+        # Just return supplied value if native
+        ([], assetId)
+    } else if (type == typeWrapped) then {
+        # Issue new token only if no asset ID is supplied
+        if (assetId.size() == 0)
+            then {
+                let issue = Issue(name, description, 0, precision, true)
+                ([issue], calculateAssetId(issue))
+            } 
+            else ([], assetId)
+    } else throw(errInvalidValues)
+    
+    let keySourceBase = toBase64String(assetSourceAndAddress)
+    let keyNativeBase = toBase64String(assetNativeId)
+
+    let keySourceAddress = keySourceBase + keyAddress
+    let keyNativeAddress = keyNativeBase + keyAddress
+    if (getBinary(keySourceAddress).isDefined() || getBinary(keyNativeAddress).isDefined())
+        then throw(errAlreadyExists)
+        else actions ++ [
+            BinaryEntry(keySourceAddress, assetNativeId),
+            BinaryEntry(keyNativeAddress, assetSourceAndAddress),
+            IntegerEntry(keyNativeBase + keyType, type),
+            IntegerEntry(keyNativeBase + keyPrecision, precision)
+        ]
+}
+
+@Callable(i)
+func removeAsset(
+    assetSourceAndAddress: ByteVector,  # First 4 bytes are token source, then up to 32 byte address
+    newAuthority: ByteVector
+) = {
+    strict callerCheck = assertCallerIsAdmin(i)
+    
+    let keySourceBase = toBase64String(assetSourceAndAddress)
+    let keySourceAddress = keySourceBase + keyAddress
+
+    let assetNativeId = valueOrErrorMessage(getBinary(keySourceAddress), errNotExists)
+
+    let keyNativeBase = toBase64String(assetNativeId)
+    let keyNativeAddress = keyNativeBase + keyAddress
+
+    let keyAssetType = keyNativeBase + keyType
+    let type = valueOrErrorMessage(getInteger(keyAssetType), errNotExists)
+
+    let actions = if (type == typeBase) then {
+        # Transfer all WAVES to ne authority
+        let balance = wavesBalance(this)
+        if (balance.available > 0)
+            then [ScriptTransfer(Address(newAuthority), balance.available, unit)]
+            else []
+    } else if (type == typeNative) then {
+        # Transfer all assets to new authority
+        let balance = assetBalance(this, assetNativeId)
+        if (balance > 0) 
+            then [ScriptTransfer(Address(newAuthority), balance, assetNativeId)]
+            else []
+    } else if (type == typeWrapped) then {
+        # Chenge asset issuer
+        []
+    } else throw(errInvalidValues)
+    
+    actions ++ [
+        DeleteEntry(keySourceAddress),
+        DeleteEntry(keyNativeAddress),
+        DeleteEntry(keyAssetType),
+        DeleteEntry(keyNativeBase + keyPrecision)
+    ]
+}
 
 @Callable(i)
 func lock(lockId: ByteVector, recipient: ByteVector, destination: ByteVector) = {
-    if (size(i.payments) != 1) 
+    if (i.payments.size() != 1) 
         then throw(errNotOnePayment) 
         else 
     let assetId = valueOrElse(i.payments[0].assetId, baseAssetId)
+    let assetIdStr = assetId.toBase64String()
     let amount = i.payments[0].amount
-    let keyNativeBase = toBase64String(assetId)
-    let assetAddress = valueOrErrorMessage(getBinary(keyAssets), errUninitialized)
-    let validatorAddress = valueOrErrorMessage(getBinary(keyValidator), errUninitialized)
+    let validatorAddress = getBinary(keyValidator).valueOrErrorMessage(errUninitialized)
 
-    let tokenSourceAndAddress = getBinary(Address(assetAddress), [keyNativeBase, keyAddress].makeString(".")).valueOrErrorMessage(errAssetNotFound)
+    let tokenSourceAndAddress = getBinary(assetIdStr + keyAddress).valueOrErrorMessage(errAssetNotFound)
+    let type = getInteger(assetIdStr + keyType).valueOrErrorMessage(errAssetNotFound)
     strict createLock = invoke(Address(validatorAddress), "createLock", [lockId, recipient, amount, destination, tokenSourceAndAddress], [])
-
+    if (type == typeWrapped) then {
+     []   
+    } else 
     []
 }

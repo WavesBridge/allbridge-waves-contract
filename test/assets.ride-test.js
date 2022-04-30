@@ -22,23 +22,26 @@ describe('Assets', async function () {
     let NATIVE_ASSET_ID = "";
     let NATIVE_ASSET_ID_B58 = "";
     let ADMIN = "";
+    let VALIDATOR = "";
     let ALICE = "";
     let NEW_OWNER = "";
 
     before(async function () {
         await setupAccounts({
-            assets: toWavelet(10),
+            bridge: toWavelet(10),
             admin: toWavelet(10),
             token: toWavelet(10),
             alice: toWavelet(10),
+            validator: toWavelet(10),
             newOwner: toWavelet(10),
         });
-        const script = compile(file('assets.ride'));
-        const ssTx = setScript({script}, accounts.assets);
+        const script = compile(file('bridge.ride'));
+        const ssTx = setScript({script}, accounts.bridge);
         await broadcastAndWait(ssTx);
         console.log('Script has been set');
 
         ADMIN = accountSeedToBase64(accounts.admin);
+        VALIDATOR = accountSeedToBase64(accounts.validator);
         ALICE = accountSeedToBase64(accounts.alice);
         NEW_OWNER = accountSeedToBase64(accounts.newOwner);
 
@@ -46,8 +49,8 @@ describe('Assets', async function () {
         console.log(`Alice b64: ${ALICE}`);
 
         const adminTx = invokeScript({
-            dApp: address(accounts.assets),
-            call: {function: "setAdmin", args: [{type:'binary', value: ADMIN}]},
+            dApp: address(accounts.bridge),
+            call: {function: "setConfig", args: [{type:'binary', value: ADMIN}, {type:'binary', value: VALIDATOR}]},
         }, accounts.admin);
 
         await broadcastAndWait(adminTx);
@@ -65,7 +68,7 @@ describe('Assets', async function () {
         NATIVE_ASSET_ID = base58ToBase64(NATIVE_ASSET_ID_B58)
         await broadcastAndWait(transfer({
             amount: toWavelet(5),
-            recipient: address(accounts.assets),
+            recipient: address(accounts.bridge),
             assetId: NATIVE_ASSET_ID_B58
         }, accounts.token));
 
@@ -76,36 +79,38 @@ describe('Assets', async function () {
 
         // Unauthorized to set new admin
         const txFail = invokeScript({
-            dApp: address(accounts.assets),
-            call: {function: "setAdmin", args: [{type:'binary', value: ALICE}]},
+            dApp: address(accounts.bridge),
+            call: {function: "setConfig", args: [{type:'binary', value: ALICE}, {type:'binary', value: VALIDATOR}]},
         }, accounts.alice);
 
         expect(broadcast(txFail)).to.be.rejectedWith("unauthorized")
 
         // Successful admin change
         const txSuccess = invokeScript({
-            dApp: address(accounts.assets),
-            call: {function: "setAdmin", args: [{type:'binary', value: ALICE}]},
+            dApp: address(accounts.bridge),
+            call: {function: "setConfig", args: [{type:'binary', value: ALICE}, {type:'binary', value: VALIDATOR}]},
         }, accounts.admin);
 
         await broadcastAndWait(txSuccess);
 
         // Check if new admin is saved
-        let recordSource = await accountDataByKey(`_a`, address(accounts.assets));
+        let recordSource = await accountDataByKey(`_a`, address(accounts.bridge));
         expect(recordSource.value).to.be.equal(`base64:${ALICE}`);
+        let recordValidator = await accountDataByKey(`_v`, address(accounts.bridge));
+        expect(recordValidator.value).to.be.equal(`base64:${VALIDATOR}`);
 
         // Failure to change back
         const txFail1 = invokeScript({
-            dApp: address(accounts.assets),
-            call: {function: "setAdmin", args: [{type:'binary', value: ALICE}]},
+            dApp: address(accounts.bridge),
+            call: {function: "setConfig", args: [{type:'binary', value: ALICE}, {type:'binary', value: VALIDATOR}]},
         }, accounts.admin);
 
         expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized")
 
         // Successful change back
         const txSuccess1 = invokeScript({
-            dApp: address(accounts.assets),
-            call: {function: "setAdmin", args: [{type:'binary', value: ADMIN}]},
+            dApp: address(accounts.bridge),
+            call: {function: "setConfig", args: [{type:'binary', value: ADMIN}, {type:'binary', value: VALIDATOR}]},
         }, accounts.alice);
 
         await broadcastAndWait(txSuccess1);
@@ -114,7 +119,7 @@ describe('Assets', async function () {
     it('add asset (base)', async function () {
 
         const params = {
-            dApp: address(accounts.assets),
+            dApp: address(accounts.bridge),
             call: {
                 function: "addAsset",
                 args: [
@@ -156,16 +161,16 @@ describe('Assets', async function () {
 
         await broadcastAndWait(tx);
 
-        let recordSource = await accountDataByKey(`${BASE_ASSET_SOURCE_AND_ADDRESS}.a`, address(accounts.assets));
+        let recordSource = await accountDataByKey(`${BASE_ASSET_SOURCE_AND_ADDRESS}_aa`, address(accounts.bridge));
         expect(recordSource.value).to.be.equal(`base64:${BASE_ASSET_ID}`);
 
-        let recordNative = await accountDataByKey(`${BASE_ASSET_ID}.a`, address(accounts.assets));
+        let recordNative = await accountDataByKey(`${BASE_ASSET_ID}_aa`, address(accounts.bridge));
         expect(recordNative.value).to.be.equal(`base64:${BASE_ASSET_SOURCE_AND_ADDRESS}`);
 
-        let recordType = await accountDataByKey(`${BASE_ASSET_ID}.t`, address(accounts.assets));
+        let recordType = await accountDataByKey(`${BASE_ASSET_ID}_at`, address(accounts.bridge));
         expect(recordType.value).to.be.equal(TYPE_BASE);
 
-        let recordPrecision = await accountDataByKey(`${BASE_ASSET_ID}.p`, address(accounts.assets));
+        let recordPrecision = await accountDataByKey(`${BASE_ASSET_ID}_ap`, address(accounts.bridge));
         expect(recordPrecision.value).to.be.equal(8);
 
         // Adding the same token again
@@ -175,7 +180,7 @@ describe('Assets', async function () {
 
     it('add asset (native)', async function () {
         const params = {
-            dApp: address(accounts.assets),
+            dApp: address(accounts.bridge),
             call: {
                 function: "addAsset",
                 args: [
@@ -198,16 +203,16 @@ describe('Assets', async function () {
 
         await broadcastAndWait(tx);
 
-        let recordSource = await accountDataByKey(`${NATIVE_ASSET_SOURCE_AND_ADDRESS}.a`, address(accounts.assets));
+        let recordSource = await accountDataByKey(`${NATIVE_ASSET_SOURCE_AND_ADDRESS}_aa`, address(accounts.bridge));
         expect(recordSource.value).to.be.equal(`base64:${NATIVE_ASSET_ID}`);
 
-        let recordNative = await accountDataByKey(`${NATIVE_ASSET_ID}.a`, address(accounts.assets));
+        let recordNative = await accountDataByKey(`${NATIVE_ASSET_ID}_aa`, address(accounts.bridge));
         expect(recordNative.value).to.be.equal(`base64:${NATIVE_ASSET_SOURCE_AND_ADDRESS}`);
 
-        let recordType = await accountDataByKey(`${NATIVE_ASSET_ID}.t`, address(accounts.assets));
+        let recordType = await accountDataByKey(`${NATIVE_ASSET_ID}_at`, address(accounts.bridge));
         expect(recordType.value).to.be.equal(TYPE_NATIVE);
 
-        let recordPrecision = await accountDataByKey(`${NATIVE_ASSET_ID}.p`, address(accounts.assets));
+        let recordPrecision = await accountDataByKey(`${NATIVE_ASSET_ID}_ap`, address(accounts.bridge));
         expect(recordPrecision.value).to.be.equal(8);
 
         // Adding the same token again
@@ -217,7 +222,7 @@ describe('Assets', async function () {
 
     it('add asset (wrapped)', async function () {
         const params = {
-            dApp: address(accounts.assets),
+            dApp: address(accounts.bridge),
             call: {
                 function: "addAsset",
                 args: [
@@ -241,17 +246,17 @@ describe('Assets', async function () {
 
         await broadcastAndWait(tx);
 
-        const recordSource = await accountDataByKey(`${WRAPPED_ASSET_SOURCE_AND_ADDRESS}.a`, address(accounts.assets));
+        const recordSource = await accountDataByKey(`${WRAPPED_ASSET_SOURCE_AND_ADDRESS}_aa`, address(accounts.bridge));
         const wrappedAssetId = recordSource.value.replace('base64:', '');
         expect(wrappedAssetId.value).not.to.be.equal('');
 
-        let recordNative = await accountDataByKey(`${wrappedAssetId}.a`, address(accounts.assets));
+        let recordNative = await accountDataByKey(`${wrappedAssetId}_aa`, address(accounts.bridge));
         expect(recordNative.value).to.be.equal(`base64:${WRAPPED_ASSET_SOURCE_AND_ADDRESS}`);
 
-        let recordType = await accountDataByKey(`${wrappedAssetId}.t`, address(accounts.assets));
+        let recordType = await accountDataByKey(`${wrappedAssetId}_at`, address(accounts.bridge));
         expect(recordType.value).to.be.equal(TYPE_WRAPPED);
 
-        let recordPrecision = await accountDataByKey(`${wrappedAssetId}.p`, address(accounts.assets));
+        let recordPrecision = await accountDataByKey(`${wrappedAssetId}_ap`, address(accounts.bridge));
         expect(recordPrecision.value).to.be.equal(6);
 
         // Adding the same token again
@@ -261,7 +266,7 @@ describe('Assets', async function () {
 
     it('remove (base)', async () => {
         const params = {
-            dApp: address(accounts.assets),
+            dApp: address(accounts.bridge),
             call: {
                 function: "removeAsset",
                 args: [
@@ -271,7 +276,7 @@ describe('Assets', async function () {
             }
         };
 
-        const bridgeBalanceBefore = await balance(address(accounts.assets));
+        const bridgeBalanceBefore = await balance(address(accounts.bridge));
         const nweOwnerBalanceBefore = await balance(address(accounts.newOwner));
 
 
@@ -284,22 +289,22 @@ describe('Assets', async function () {
 
         await broadcastAndWait(tx);
 
-        const bridgeBalanceAfter = await balance(address(accounts.assets));
+        const bridgeBalanceAfter = await balance(address(accounts.bridge));
         const nweOwnerBalanceAfter = await balance(address(accounts.newOwner));
         
         expect(bridgeBalanceAfter).equal(0);
         expect(nweOwnerBalanceAfter).equal(nweOwnerBalanceBefore + bridgeBalanceBefore);
 
-        let recordSource = await accountDataByKey(`${BASE_ASSET_SOURCE_AND_ADDRESS}.a`, address(accounts.assets));
+        let recordSource = await accountDataByKey(`${BASE_ASSET_SOURCE_AND_ADDRESS}_aa`, address(accounts.bridge));
         expect(recordSource).equal(null);
 
-        let recordNative = await accountDataByKey(`${BASE_ASSET_ID}.a`, address(accounts.assets));
+        let recordNative = await accountDataByKey(`${BASE_ASSET_ID}_aa`, address(accounts.bridge));
         expect(recordNative).equal(null);
 
-        let recordType = await accountDataByKey(`${BASE_ASSET_ID}.t`, address(accounts.assets));
+        let recordType = await accountDataByKey(`${BASE_ASSET_ID}_at`, address(accounts.bridge));
         expect(recordType).equal(null);
 
-        let recordPrecision = await accountDataByKey(`${BASE_ASSET_ID}.p`, address(accounts.assets));
+        let recordPrecision = await accountDataByKey(`${BASE_ASSET_ID}_ap`, address(accounts.bridge));
         expect(recordPrecision).equal(null);
       
         // Remove the same token again
@@ -309,7 +314,7 @@ describe('Assets', async function () {
 
     it('remove (native)', async () => {
         const params = {
-            dApp: address(accounts.assets),
+            dApp: address(accounts.bridge),
             call: {
                 function: "removeAsset",
                 args: [
@@ -319,7 +324,7 @@ describe('Assets', async function () {
             }
         };
 
-        const bridgeBalanceBefore = await assetBalance(NATIVE_ASSET_ID_B58, address(accounts.assets)) || 0;
+        const bridgeBalanceBefore = await assetBalance(NATIVE_ASSET_ID_B58, address(accounts.bridge)) || 0;
         const newOwnerBalanceBefore = await assetBalance(NATIVE_ASSET_ID_B58, address(accounts.newOwner)) || 0;
 
         // Wrong signer
@@ -331,22 +336,22 @@ describe('Assets', async function () {
 
         await broadcastAndWait(tx);
 
-        const bridgeBalanceAfter = await assetBalance(NATIVE_ASSET_ID_B58, address(accounts.assets)) || 0;
+        const bridgeBalanceAfter = await assetBalance(NATIVE_ASSET_ID_B58, address(accounts.bridge)) || 0;
         const newOwnerBalanceAfter = await assetBalance(NATIVE_ASSET_ID_B58, address(accounts.newOwner)) || 0;
         
         expect(bridgeBalanceAfter).equal(0);
         expect(newOwnerBalanceAfter).equal(newOwnerBalanceBefore + bridgeBalanceBefore);
 
-        let recordSource = await accountDataByKey(`${NATIVE_ASSET_SOURCE_AND_ADDRESS}.a`, address(accounts.assets));
+        let recordSource = await accountDataByKey(`${NATIVE_ASSET_SOURCE_AND_ADDRESS}_aa`, address(accounts.bridge));
         expect(recordSource).equal(null);
 
-        let recordNative = await accountDataByKey(`${NATIVE_ASSET_ID}.a`, address(accounts.assets));
+        let recordNative = await accountDataByKey(`${NATIVE_ASSET_ID}_aa`, address(accounts.bridge));
         expect(recordNative).equal(null);
 
-        let recordType = await accountDataByKey(`${NATIVE_ASSET_ID}.t`, address(accounts.assets));
+        let recordType = await accountDataByKey(`${NATIVE_ASSET_ID}_at`, address(accounts.bridge));
         expect(recordType).equal(null);
 
-        let recordPrecision = await accountDataByKey(`${NATIVE_ASSET_ID}.p`, address(accounts.assets));
+        let recordPrecision = await accountDataByKey(`${NATIVE_ASSET_ID}_ap`, address(accounts.bridge));
         expect(recordPrecision).equal(null);
       
         // Remove the same token again
@@ -356,7 +361,7 @@ describe('Assets', async function () {
 
     it('remove (wrapped)', async () => {
         const params = {
-            dApp: address(accounts.assets),
+            dApp: address(accounts.bridge),
             call: {
                 function: "removeAsset",
                 args: [
@@ -366,7 +371,7 @@ describe('Assets', async function () {
             }
         };
 
-        const recordSourceBefore = await accountDataByKey(`${WRAPPED_ASSET_SOURCE_AND_ADDRESS}.a`, address(accounts.assets));
+        const recordSourceBefore = await accountDataByKey(`${WRAPPED_ASSET_SOURCE_AND_ADDRESS}_aa`, address(accounts.bridge));
         const wrappedAssetId = recordSourceBefore.value.replace('base64:', '');
 
         // Wrong signer
@@ -378,16 +383,16 @@ describe('Assets', async function () {
 
         await broadcastAndWait(tx);
 
-        let recordSource = await accountDataByKey(`${WRAPPED_ASSET_SOURCE_AND_ADDRESS}.a`, address(accounts.assets));
+        let recordSource = await accountDataByKey(`${WRAPPED_ASSET_SOURCE_AND_ADDRESS}_aa`, address(accounts.bridge));
         expect(recordSource).equal(null);
 
-        let recordNative = await accountDataByKey(`${wrappedAssetId}.a`, address(accounts.assets));
+        let recordNative = await accountDataByKey(`${wrappedAssetId}_aa`, address(accounts.bridge));
         expect(recordNative).equal(null);
 
-        let recordType = await accountDataByKey(`${wrappedAssetId}.t`, address(accounts.assets));
+        let recordType = await accountDataByKey(`${wrappedAssetId}_at`, address(accounts.bridge));
         expect(recordType).equal(null);
 
-        let recordPrecision = await accountDataByKey(`${wrappedAssetId}.p`, address(accounts.assets));
+        let recordPrecision = await accountDataByKey(`${wrappedAssetId}_ap`, address(accounts.bridge));
         expect(recordPrecision).equal(null);
       
         // Remove the same token again
