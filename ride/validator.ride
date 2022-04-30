@@ -2,11 +2,11 @@
 {-# CONTENT_TYPE DAPP #-}
 {-# SCRIPT_TYPE ACCOUNT #-}
 
-func keyLock(lockId: ByteVector, key: String) = {[lockId.toBase64String(), key].makeString(".")}
-func keyLockRecipient(lockId: ByteVector) = keyLock(lockId, "l.r") # Lock recipient
-func keyLockAmount(lockId: ByteVector) = keyLock(lockId, "l.a") # Lock amount
-func keyLockDestination(lockId: ByteVector) = keyLock(lockId, "l.d") # Lock destination
-func keyLockTokenSource(lockId: ByteVector) = keyLock(lockId, "l.ts")  # Lock token source and address
+func toLockKey(lockIdStr: String, key: String) = lockIdStr + key
+let keyLockRecipient = "_l.r" # Lock recipient 32-byte
+let keyLockAmount = "_l.a" # Lock amount Int
+let keyLockDestination = "_l.d" # Lock destination 4-byte
+let keyLockTokenSource = "_l.ts"  # Lock token source and address 36-byte
 
 let keyVersion = "_v"   # Binary version number
 let keyBridge = "_b"    # Bridge contract address, only bridge can call validator
@@ -41,8 +41,8 @@ func assertValidLockId(lockId: ByteVector) = {
         else unit
 }
 
-func assertLockNotExists(lockId: ByteVector) = {
-    match (getBinary(keyLockRecipient(lockId))) {
+func assertLockNotExists(lockRecipientKey: String) = {
+    match (getBinary(lockRecipientKey)) {
         case t: ByteVector => throw(errAlreadyLocked)
         case _ => unit
     }
@@ -79,9 +79,9 @@ func createUnlock(
     # Check caller, must be bridge contract
     strict checkCaller = assertCallerIsBridge(i)
     # Check if unlock was already created
-    let lockIdAsString = lockId.toBase64String();
-    let lockSourceAsString = lockSource.toBase64String();
-    let unlockKey = [lockSourceAsString, lockIdAsString].makeString(".")
+    let lockIdStr = lockId.toBase64String();
+    let lockSourceStr = lockSource.toBase64String();
+    let unlockKey = [lockSourceStr, lockIdStr].makeString(".")
     if (isDefined(getBoolean(unlockKey)))
         then throw(errAlreadyClaimed)
         else
@@ -116,15 +116,16 @@ func createLock(
     lockDestination: ByteVector,
     tokenSourceAndAddress: ByteVector
 ) = {
-    
-    strict checkLockId = assertValidLockId(lockId)
-    strict checkLock = assertLockNotExists(lockId)
+    let lockIdStr = lockId.toBase64String()
+    let lockRecipientKey = lockIdStr.toLockKey(keyLockRecipient)
     strict checkCaller = assertCallerIsBridge(i)
+    strict checkLockId = assertValidLockId(lockId)
+    strict checkLock = assertLockNotExists(lockRecipientKey)
 
     [
-        BinaryEntry(keyLockRecipient(lockId), recipient),
-        IntegerEntry(keyLockAmount(lockId), amount),
-        BinaryEntry(keyLockDestination(lockId), lockDestination),
-        BinaryEntry(keyLockTokenSource(lockId), tokenSourceAndAddress)
+        BinaryEntry(lockIdStr.toLockKey(keyLockRecipient), recipient),
+        IntegerEntry(lockIdStr.toLockKey(keyLockAmount), amount),
+        BinaryEntry(lockIdStr.toLockKey(keyLockDestination), lockDestination),
+        BinaryEntry(lockIdStr.toLockKey(keyLockTokenSource), tokenSourceAndAddress)
     ]
 }
