@@ -58,6 +58,7 @@ async function initBridgeContract() {
         arguments: [{type:'binary', value: accountSeedToBase64(accounts.admin)}, 
                     {type:'binary', value: accountSeedToBase64(accounts.validator)},
                     {type:'binary', value: accountSeedToBase64(accounts.feeCollector)},
+                    {type:'binary', value: accountSeedToBase64(accounts.unclokSigner)},
                     {type:'integer', value: 30}],
     }, accounts.admin)
     await waitForTx(initTx.id);

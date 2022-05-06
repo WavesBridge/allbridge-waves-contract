@@ -26,12 +26,14 @@ describe('Assets', async function () {
     let VALIDATOR = "";
     let ALICE = "";
     let NEW_OWNER = "";
+    let UNLOCK_SIGNER = "";
 
     before(async function () {
         await setupAccounts({
             bridge: toWavelet(10),
             admin: toWavelet(10),
             feeCollector: toWavelet(10),
+            unclokSigner: toWavelet(10),
             token: toWavelet(10),
             alice: toWavelet(10),
             validator: toWavelet(10),
@@ -42,6 +44,7 @@ describe('Assets', async function () {
         FEE_COLLECTOR = accountSeedToBase64(accounts.feeCollector);
         ALICE = accountSeedToBase64(accounts.alice);
         NEW_OWNER = accountSeedToBase64(accounts.newOwner);
+        UNLOCK_SIGNER = accountSeedToBase64(accounts.unclokSigner);
 
         console.log(`Admin b64: ${ADMIN}`);
         console.log(`Alice b64: ${ALICE}`);
@@ -77,6 +80,7 @@ describe('Assets', async function () {
                 {type:'binary', value: ALICE}, 
                 {type:'binary', value: VALIDATOR},
                 {type:'binary', value: FEE_COLLECTOR},
+                {type:'binary', value: UNLOCK_SIGNER},
                 {type:'integer', value: 50}]},
         }, accounts.alice);
 
@@ -90,6 +94,7 @@ describe('Assets', async function () {
                 {type:'binary', value: ALICE}, 
                 {type:'binary', value: VALIDATOR},
                 {type:'binary', value: FEE_COLLECTOR},
+                {type:'binary', value: UNLOCK_SIGNER},
                 {type:'integer', value: 50}],
         }, accounts.admin);
 
@@ -102,6 +107,8 @@ describe('Assets', async function () {
         expect(recordValidator.value).to.be.equal(`base64:${VALIDATOR}`);
         let recordFeeCollector = await accountDataByKey(`_fc`, address(accounts.bridge));
         expect(recordFeeCollector.value).to.be.equal(`base64:${FEE_COLLECTOR}`);
+        let recordUnlockSigner = await accountDataByKey(`_us`, address(accounts.bridge));
+        expect(recordUnlockSigner.value).to.be.equal(`base64:${UNLOCK_SIGNER}`);
         let baseFeeRate = await accountDataByKey(`_bfr`, address(accounts.bridge));
         expect(baseFeeRate.value).to.be.equal(50);
     
@@ -112,6 +119,7 @@ describe('Assets', async function () {
                 {type:'binary', value: ALICE}, 
                 {type:'binary', value: VALIDATOR},
                 {type:'binary', value: FEE_COLLECTOR},
+                {type:'binary', value: UNLOCK_SIGNER},
                 {type:'integer', value: 30}]},
         }, accounts.admin);
 
@@ -125,6 +133,7 @@ describe('Assets', async function () {
                 {type:'binary', value: ADMIN}, 
                 {type:'binary', value: VALIDATOR},
                 {type:'binary', value: FEE_COLLECTOR},
+                {type:'binary', value: UNLOCK_SIGNER},
                 {type:'integer', value: 30}],
         }, accounts.alice);
 

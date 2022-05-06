@@ -12,6 +12,7 @@ let ketBaseFeeRateBP = "_bfr"
 let keyAdmin = "_a"
 let keyValidator = "_v"
 let keyFeeCollector = "_fc"
+let keyUnlockSigner = "_us"
 
 let baseAssetSourceAndAddress = base64'V0FWRVdBVkU='   # 0x57415645 57415645
 let baseAssetId = base64'V0FWRQ==' # 0x57415645
@@ -81,12 +82,13 @@ func fromSystemPrecision(amount: Int, precision: Int) = {
 }
 
 @Callable(i)
-func setConfig(admin: ByteVector, validatorAddress: ByteVector, feeCollector: ByteVector, baseFeeRateBP: Int) = {
+func setConfig(admin: ByteVector, validatorAddress: ByteVector, feeCollector: ByteVector, unlockSigner: ByteVector, baseFeeRateBP: Int) = {
     strict callerCheck = assertCallerIsAdmin(i)
     [
         BinaryEntry(keyAdmin, admin),
         BinaryEntry(keyValidator, validatorAddress),
         BinaryEntry(keyFeeCollector, feeCollector),
+        BinaryEntry(keyUnlockSigner, unlockSigner),
         IntegerEntry(ketBaseFeeRateBP, baseFeeRateBP)
     ]
 }
@@ -225,6 +227,8 @@ func unlock(lockId: ByteVector,
         let type = getInteger(assetIdStr + keyAssetType).valueOrErrorMessage(errAssetNotFound)
         let precision = getInteger(assetIdStr + keyAssetPrecision).valueOrErrorMessage(errAssetNotFound)
         let validatorAddress = getBinary(keyValidator).valueOrErrorMessage(errUninitialized)
+        let unlockSigner = getBinary(keyUnlockSigner).valueOrErrorMessage(errUninitialized)
+        let feeCollector = getBinary(keyFeeCollector).valueOrErrorMessage(errUninitialized)
 
         strict createUnlock = invoke(Address(validatorAddress), "createUnlock", [
             lockId, 
@@ -242,16 +246,27 @@ func unlock(lockId: ByteVector,
             throw(errInvalidValues)
         } else 
 
-        let amountToSend = amount.fromSystemPrecision(precision)
+        let fee = if (unlockSigner == i.caller.bytes) 
+            then getInteger(assetIdStr + keyAssetMinFee).valueOrErrorMessage(errAssetNotFound)
+            else 0
+        let amountToSend = amount.fromSystemPrecision(precision);
+        let amountToSendWithoutFee = amountToSend - fee;
+        if (amountToSendWithoutFee <= 0) then {
+            throw(errNotEnoughBalance)
+        } else
+
         if (type == typeBase) then {
-            [ScriptTransfer(Address(recipient), amountToSend, unit)]
+            [ScriptTransfer(Address(recipient), amountToSendWithoutFee, unit)] ++
+            if (fee > 0) then [ScriptTransfer(Address(feeCollector), fee, unit)] else []
         } else if (type == typeNative) then {
-            [ScriptTransfer(Address(recipient), amountToSend, assetId)]
+            [ScriptTransfer(Address(recipient), amountToSendWithoutFee, assetId)] ++
+            if (fee > 0) then [ScriptTransfer(Address(feeCollector), fee, assetId)] else []
         } else if (type == typeWrapped) then {
             [
                 Reissue(assetId, amountToSend, true),
-                ScriptTransfer(Address(recipient), amountToSend, assetId)
-            ]   
+                ScriptTransfer(Address(recipient), amountToSendWithoutFee, assetId)
+            ] ++
+            if (fee > 0) then [ScriptTransfer(Address(feeCollector), fee, assetId)] else []
         } else throw(errInvalidValues)
 }
 
