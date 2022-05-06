@@ -2,17 +2,24 @@
 {-# CONTENT_TYPE DAPP #-}
 {-# SCRIPT_TYPE ACCOUNT #-}
 
-let keyAddress = "_aa"
-let keyType = "_at"
-let keyPrecision = "_ap"
+let keyAssetAddress = "_aa"
+let keyAssetType = "_at"
+let keyAssetPrecision = "_ap"
+let keyAssetMinFee = "_amf"
+
+let ketBaseFeeRateBP = "_bfr"
 
 let keyAdmin = "_a"
 let keyValidator = "_v"
+let keyFeeCollector = "_fc"
 
 let baseAssetSourceAndAddress = base64'V0FWRVdBVkU='   # 0x57415645 57415645
 let baseAssetId = base64'V0FWRQ==' # 0x57415645
 
 let chainWaves = base64'V0FWRQ==' # 0x57415645
+
+let BP = 10000
+let systemPrecision = 9
 
 let errUnauthorized = "unauthorized"
 let errUninitialized = "uninitialized"
@@ -21,6 +28,8 @@ let errNotExists = "not exists"
 let errInvalidValues = "invalid values"
 let errNotOnePayment = "not one payment"
 let errAssetNotFound = "asset not found"
+let errNotEnoughBalance = "not enough balance"
+let errBigPowValue = "pow value too big"
 
 let typeBase = 0
 let typeNative = 1
@@ -39,54 +48,91 @@ func assertCallerIsAdmin(i: Invocation) = {
         else unit
 }
 
+func getFee(amount: Int, assetIdStr: String) = {
+    let baseFeeRateBP = getInteger(ketBaseFeeRateBP).valueOrErrorMessage(errUninitialized)
+    let minFee = getInteger(assetIdStr + keyAssetMinFee).valueOrErrorMessage(errAssetNotFound)
+    let fee = amount * baseFeeRateBP / BP
+    if (fee < minFee) then minFee else fee
+}
+
+func pow10(value: Int, power: Int) = {
+    let absPow = if (power < 0) then -power else power
+    let powerValue = if (absPow == 0) then 1
+    else if (absPow == 1) then 10
+    else if (absPow == 2) then 100
+    else if (absPow == 3) then 1000
+    else if (absPow == 4) then 10000
+    else if (absPow == 5) then 100000
+    else if (absPow == 6) then 1000000
+    else if (absPow == 7) then 10000000
+    else if (absPow == 8) then 100000000
+    else if (absPow == 9) then 1000000000
+    else throw(errBigPowValue)
+
+    if (power) < 0 then value / powerValue else value * powerValue
+}
+
+func toSystemPrecision(amount: Int, precision: Int) = {
+    pow10(amount, systemPrecision - precision)
+}
+
+func fromSystemPrecision(amount: Int, precision: Int) = {
+        pow10(amount, precision - systemPrecision)
+}
+
 @Callable(i)
-func setConfig(newAdmin: ByteVector, validatorAddress: ByteVector) = {
+func setConfig(admin: ByteVector, validatorAddress: ByteVector, feeCollector: ByteVector, baseFeeRateBP: Int) = {
     strict callerCheck = assertCallerIsAdmin(i)
-    [BinaryEntry(keyAdmin, newAdmin),
-    BinaryEntry(keyValidator, validatorAddress)]
+    [
+        BinaryEntry(keyAdmin, admin),
+        BinaryEntry(keyValidator, validatorAddress),
+        BinaryEntry(keyFeeCollector, feeCollector),
+        IntegerEntry(ketBaseFeeRateBP, baseFeeRateBP)
+    ]
 }
 
 @Callable(i)
 func addAsset(
     assetSourceAndAddress: ByteVector,  # First 4 bytes are token source, then up to 32 byte address
-    assetId: ByteVector,
+    assetIdArg: ByteVector,
     type: Int,
     name: String, # Only required if creating wrapped tokens
     description: String, # Only required if creating wrapped tokens
-    precision: Int) = {
+    precision: Int,
+    minFee: Int) = {
 
     strict callerCheck = assertCallerIsAdmin(i)
 
-    let (actions, assetNativeId) = if (type == typeBase) then {
+    let (actions, assetId) = if (type == typeBase) then {
         # Check values for the base coin
-        if (assetSourceAndAddress != baseAssetSourceAndAddress || assetId != baseAssetId || precision != 8) 
+        if (assetSourceAndAddress != baseAssetSourceAndAddress || assetIdArg != baseAssetId || precision != 8) 
             then throw(errInvalidValues)
-            else ([], assetId)
+            else ([], assetIdArg)
     } else if (type == typeNative) then {
         # Just return supplied value if native
-        ([], assetId)
+        ([], assetIdArg)
     } else if (type == typeWrapped) then {
         # Issue new token only if no asset ID is supplied
-        if (assetId.size() == 0)
+        if (assetIdArg.size() == 0)
             then {
                 let issue = Issue(name, description, 0, precision, true)
                 ([issue], calculateAssetId(issue))
             } 
-            else ([], assetId)
+            else ([], assetIdArg)
     } else throw(errInvalidValues)
     
-    let keySourceBase = toBase64String(assetSourceAndAddress)
-    let keyNativeBase = toBase64String(assetNativeId)
+    let assetIdStr = toBase64String(assetId)
 
-    let keySourceAddress = keySourceBase + keyAddress
-    let keyNativeAddress = keyNativeBase + keyAddress
+    let keySourceAddress = assetSourceAndAddress.toBase64String() + keyAssetAddress
+    let keyNativeAddress = assetIdStr + keyAssetAddress
     if (getBinary(keySourceAddress).isDefined() || getBinary(keyNativeAddress).isDefined())
         then throw(errAlreadyExists)
         else actions ++ [
-            BinaryEntry(keySourceAddress, assetNativeId),
+            BinaryEntry(keySourceAddress, assetId),
             BinaryEntry(keyNativeAddress, assetSourceAndAddress),
-            IntegerEntry(keyNativeBase + keyType, type),
-            IntegerEntry(keyNativeBase + keyPrecision, precision)
+            IntegerEntry(assetIdStr + keyAssetType, type),
+            IntegerEntry(assetIdStr + keyAssetPrecision, precision),
+            IntegerEntry(assetIdStr + keyAssetMinFee, minFee)
         ]
 }
 
@@ -97,16 +143,10 @@ func removeAsset(
 ) = {
     strict callerCheck = assertCallerIsAdmin(i)
     
-    let keySourceBase = toBase64String(assetSourceAndAddress)
-    let keySourceAddress = keySourceBase + keyAddress
-
-    let assetNativeId = valueOrErrorMessage(getBinary(keySourceAddress), errNotExists)
-
-    let keyNativeBase = toBase64String(assetNativeId)
-    let keyNativeAddress = keyNativeBase + keyAddress
-
-    let keyAssetType = keyNativeBase + keyType
-    let type = valueOrErrorMessage(getInteger(keyAssetType), errNotExists)
+    let keySourceAddress = assetSourceAndAddress.toBase64String() + keyAssetAddress
+    let assetId = getBinary(keySourceAddress).valueOrErrorMessage(errNotExists)
+    let assetIdStr = toBase64String(assetId)
+    let type = getInteger(assetIdStr + keyAssetType).valueOrErrorMessage(errNotExists)
 
     let actions = if (type == typeBase) then {
         # Transfer all WAVES to ne authority
@@ -116,9 +156,9 @@ func removeAsset(
             else []
     } else if (type == typeNative) then {
         # Transfer all assets to new authority
-        let balance = assetBalance(this, assetNativeId)
+        let balance = assetBalance(this, assetId)
         if (balance > 0) 
-            then [ScriptTransfer(Address(newAuthority), balance, assetNativeId)]
+            then [ScriptTransfer(Address(newAuthority), balance, assetId)]
             else []
     } else if (type == typeWrapped) then {
         # Chenge asset issuer
@@ -127,9 +167,10 @@ func removeAsset(
     
     actions ++ [
         DeleteEntry(keySourceAddress),
-        DeleteEntry(keyNativeAddress),
-        DeleteEntry(keyAssetType),
-        DeleteEntry(keyNativeBase + keyPrecision)
+        DeleteEntry(assetIdStr + keyAssetAddress),
+        DeleteEntry(assetIdStr + keyAssetType),
+        DeleteEntry(assetIdStr + keyAssetPrecision),
+        DeleteEntry(assetIdStr + keyAssetMinFee)
     ]
 }
 
@@ -142,12 +183,87 @@ func lock(lockId: ByteVector, recipient: ByteVector, destination: ByteVector) = 
     let assetIdStr = assetId.toBase64String()
     let amount = i.payments[0].amount
     let validatorAddress = getBinary(keyValidator).valueOrErrorMessage(errUninitialized)
+    let fee = getFee(amount, assetIdStr)
+    let amountWithoutFee = amount - fee;
+    if (amountWithoutFee <= 0) then {
+        throw(errNotEnoughBalance)
+    } else
 
-    let tokenSourceAndAddress = getBinary(assetIdStr + keyAddress).valueOrErrorMessage(errAssetNotFound)
-    let type = getInteger(assetIdStr + keyType).valueOrErrorMessage(errAssetNotFound)
-    strict createLock = invoke(Address(validatorAddress), "createLock", [lockId, recipient, amount, destination, tokenSourceAndAddress], [])
-    if (type == typeWrapped) then {
-     []   
-    } else 
-    []
+    let assetSourceAndAddress = getBinary(assetIdStr + keyAssetAddress).valueOrErrorMessage(errAssetNotFound)
+    let type = getInteger(assetIdStr + keyAssetType).valueOrErrorMessage(errAssetNotFound)
+    let precision = getInteger(assetIdStr + keyAssetPrecision).valueOrErrorMessage(errAssetNotFound)
+    let feeCollector = getBinary(keyFeeCollector).valueOrErrorMessage(errUninitialized)
+
+    strict createLock = invoke(Address(validatorAddress), "createLock", [
+        lockId, 
+        recipient, 
+        amountWithoutFee.toSystemPrecision(precision), 
+        destination, 
+        assetSourceAndAddress], [])
+
+    if (type == typeBase) then {
+        [ScriptTransfer(Address(feeCollector), fee, unit)]
+    } else if (type == typeNative) then {
+        [ScriptTransfer(Address(feeCollector), fee, assetId)]
+    } else if (type == typeWrapped) then {
+        [
+            Burn(assetId, amountWithoutFee),
+            ScriptTransfer(Address(feeCollector), fee, assetId)
+        ]   
+    } else throw(errInvalidValues)
+}
+
+@Callable(i)
+func unlock(lockId: ByteVector,
+    recipient: ByteVector,
+    amount: Int,
+    lockSource: ByteVector,
+    assetSourceAndAddress: ByteVector,
+    signature: ByteVector) = {
+        let assetId = getBinary(assetSourceAndAddress.toBase64String() + keyAssetAddress).valueOrErrorMessage(errAssetNotFound)
+        let assetIdStr = assetId.toBase64String()
+        let type = getInteger(assetIdStr + keyAssetType).valueOrErrorMessage(errAssetNotFound)
+        let precision = getInteger(assetIdStr + keyAssetPrecision).valueOrErrorMessage(errAssetNotFound)
+        let validatorAddress = getBinary(keyValidator).valueOrErrorMessage(errUninitialized)
+
+        strict createUnlock = invoke(Address(validatorAddress), "createUnlock", [
+            lockId, 
+            recipient, 
+            amount, 
+            lockSource, 
+            assetSourceAndAddress, 
+            signature], [])
+
+        let isValid = match (createUnlock) {
+            case v:Boolean => v
+            case _ => false
+          }
+        if (!isValid) then {
+            throw(errInvalidValues)
+        } else 
+
+        let amountToSend = amount.fromSystemPrecision(precision)
+        if (type == typeBase) then {
+            [ScriptTransfer(Address(recipient), amountToSend, unit)]
+        } else if (type == typeNative) then {
+            [ScriptTransfer(Address(recipient), amountToSend, assetId)]
+        } else if (type == typeWrapped) then {
+            [
+                Reissue(assetId, amountToSend, true),
+                ScriptTransfer(Address(recipient), amountToSend, assetId)
+            ]   
+        } else throw(errInvalidValues)
+}
+
+@Callable(i)
+func setMinFee(assetId: ByteVector, minFee: Int) = {
+    strict callerCheck = assertCallerIsAdmin(i)
+    let assetIdStr = assetId.toBase64String()
+    [IntegerEntry(assetIdStr + keyAssetMinFee, minFee)]
+}
+
+@Callable(i)
+func setBaseFeeRate(baseFeeRateBP: Int) = {
+    strict callerCheck = assertCallerIsAdmin(i)
+    [IntegerEntry(ketBaseFeeRateBP, baseFeeRateBP)]
 }

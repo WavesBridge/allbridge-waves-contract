@@ -2,16 +2,16 @@
 {-# CONTENT_TYPE DAPP #-}
 {-# SCRIPT_TYPE ACCOUNT #-}
 
-func toLockKey(lockIdStr: String, key: String) = lockIdStr + key
-let keyLockRecipient = "_l.r" # Lock recipient 32-byte
-let keyLockAmount = "_l.a" # Lock amount Int
-let keyLockDestination = "_l.d" # Lock destination 4-byte
-let keyLockTokenSource = "_l.ts"  # Lock token source and address 36-byte
+let keyLockRecipient = "_lr" # Lock recipient 32-byte
+let keyLockAmount = "_la" # Lock amount Int
+let keyLockDestination = "_ld" # Lock destination 4-byte
+let keyLockAssetSource = "_las"  # Lock token source and address 36-byte
 
 let keyVersion = "_v"   # Binary version number
 let keyBridge = "_b"    # Bridge contract address, only bridge can call validator
 let keyOracle = "_o"    # 64-byte oracle pubkey
 let keyAdmin = "_a"     # Admin address
+let keyUnlock = "_u"    # Unlock
 
 let errUnauthorized = "unauthorized"
 let errUninitialized = "uninitialized"
@@ -81,7 +81,7 @@ func createUnlock(
     # Check if unlock was already created
     let lockIdStr = lockId.toBase64String();
     let lockSourceStr = lockSource.toBase64String();
-    let unlockKey = [lockSourceStr, lockIdStr].makeString(".")
+    let unlockKey = lockSourceStr + "_" + lockIdStr + keyUnlock
     if (isDefined(getBoolean(unlockKey)))
         then throw(errAlreadyClaimed)
         else
@@ -93,7 +93,7 @@ func createUnlock(
         amount.toString(),
         lockSource.toBase64String(),
         tokenSourceAndAddress.toBase64String()
-    ].makeString(".")
+    ].makeString("_")
     
     # Check signature
     let hash = message.toBytes().keccak256()
@@ -117,15 +117,15 @@ func createLock(
     tokenSourceAndAddress: ByteVector
 ) = {
     let lockIdStr = lockId.toBase64String()
-    let lockRecipientKey = lockIdStr.toLockKey(keyLockRecipient)
+    let lockRecipientKey = lockIdStr + keyLockRecipient
     strict checkCaller = assertCallerIsBridge(i)
     strict checkLockId = assertValidLockId(lockId)
     strict checkLock = assertLockNotExists(lockRecipientKey)
 
     [
-        BinaryEntry(lockIdStr.toLockKey(keyLockRecipient), recipient),
-        IntegerEntry(lockIdStr.toLockKey(keyLockAmount), amount),
-        BinaryEntry(lockIdStr.toLockKey(keyLockDestination), lockDestination),
-        BinaryEntry(lockIdStr.toLockKey(keyLockTokenSource), tokenSourceAndAddress)
+        BinaryEntry(lockIdStr + keyLockRecipient, recipient),
+        IntegerEntry(lockIdStr + keyLockAmount, amount),
+        BinaryEntry(lockIdStr + keyLockDestination, lockDestination),
+        BinaryEntry(lockIdStr + keyLockAssetSource, tokenSourceAndAddress)
     ]
 }

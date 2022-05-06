@@ -62,7 +62,7 @@ describe('Validator', async function () {
         const lockSource = Buffer.from([11, 22, 33, 44]).toString("base64");
         const tokenSourceAndAddress = Buffer.from([11, 22, 33, 44, 55]).toString("base64");
         
-        const message = `${lockId}.${recipient}.${amount}.${lockSource}.${tokenSourceAndAddress}`;
+        const message = [lockId, recipient, amount, lockSource, tokenSourceAndAddress].join('_');
         const hashBuffer = wavesCrypto.keccak(Buffer.from(message, "utf-8"));
         const sign = eth.ecsign(hashBuffer, oracle);
         const signatureHex = eth.toRpcSig(sign.v, sign.r, sign.s)
