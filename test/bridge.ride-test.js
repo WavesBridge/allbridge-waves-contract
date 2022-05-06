@@ -30,6 +30,7 @@ describe('Assets', async function () {
     let VALIDATOR = "";
     let BRIDGE = "";
     let FEE_COLLECTOR = "";
+    let UNLOCK_SIGNER = "";
     const oracle = wavesCrypto.randomBytes(32);
 
     before(async function () {
@@ -37,6 +38,7 @@ describe('Assets', async function () {
             bridge: toWavelet(10),
             validator: toWavelet(10),
             feeCollector: toWavelet(10),
+            unclokSigner: toWavelet(10),
             admin: toWavelet(10),
             token: toWavelet(10),
             alice: toWavelet(10),
@@ -48,6 +50,7 @@ describe('Assets', async function () {
         NEW_OWNER = accountSeedToBase64(accounts.newOwner);
         BRIDGE = accountSeedToBase64(accounts.bridge);
         FEE_COLLECTOR = accountSeedToBase64(accounts.feeCollector);
+        UNLOCK_SIGNER = accountSeedToBase64(accounts.unclokSigner);
 
         const oraclePublicKey = eth.privateToPublic(Buffer.from(oracle)).toString("base64");
         await initValidatorContract(oraclePublicKey);
