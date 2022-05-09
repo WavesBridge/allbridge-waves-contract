@@ -1,7 +1,7 @@
-const { base64Decode, base58Decode } = require('@waves/ts-lib-crypto');
+const { base64Decode } = require('@waves/ts-lib-crypto');
 const {accountSeedToBase64, toWavelet, broadcastAndWait, base58ToBase64, initValidatorContract, 
-    initBridgeContract, getLockData, base64ToString} = require('./utils');
-const eth = require('ethereumjs-util');
+    initBridgeContract, getLockData, base64ToString, getSigneture, invokeAndWait, clone} = require('./utils');
+
 
 const NATIVE_ASSET_SOURCE = Buffer.from("POL\0")
 const NATIVE_ASSET_ADDRESS = Buffer.from("1122334455667788990011223344556677889900", "hex")
@@ -31,7 +31,7 @@ describe('Assets', async function () {
     let BRIDGE = "";
     let FEE_COLLECTOR = "";
     let UNLOCK_SIGNER = "";
-    const oracle = wavesCrypto.randomBytes(32);
+    let ORACLE;
 
     before(async function () {
         await setupAccounts({
@@ -52,8 +52,7 @@ describe('Assets', async function () {
         FEE_COLLECTOR = accountSeedToBase64(accounts.feeCollector);
         UNLOCK_SIGNER = accountSeedToBase64(accounts.unclokSigner);
 
-        const oraclePublicKey = eth.privateToPublic(Buffer.from(oracle)).toString("base64");
-        await initValidatorContract(oraclePublicKey);
+        ORACLE = await initValidatorContract();
         await initBridgeContract();
 
         const issueTx = issue({
@@ -79,90 +78,119 @@ describe('Assets', async function () {
     it('set config', async function () {
         // TODO
     })
+    describe('lock', () => {
+        it('lock', async function () {
+            const fee = 1000000;
+            const addTokenTx = await invokeAndWait({dApp: address(accounts.bridge), functionName: 'addAsset', arguments: [
+                base64Decode(BASE_ASSET_SOURCE_AND_ADDRESS), base64Decode(BASE_ASSET_ID), TYPE_BASE, "", "", 8, fee
+            ]}, accounts.admin);
 
-    it('lock', async function () {
-        const fee = 1000000;
-        const addTokenTx = await invoke({dApp: address(accounts.bridge), functionName: 'addAsset', arguments: [
-            base64Decode(BASE_ASSET_SOURCE_AND_ADDRESS), base64Decode(BASE_ASSET_ID), TYPE_BASE, "", "", 8, fee
-        ]}, accounts.admin);
-        await waitForTx(addTokenTx.id);
+            const lockId = Buffer.from(new Array(16).fill(1)).toString('base64')
+            const recipient = Buffer.from(new Array(32).fill(2)).toString('base64');
+            const destination = Buffer.from("ETH\0").toString('base64');
+            const amount = toWavelet(0.12)
 
-        const lockId = Buffer.from(new Array(16).fill(1))
-        const recipient = Buffer.from(new Array(32).fill(2));
-        const destination = Buffer.from("ETH\0");
-        const amount = toWavelet(0.12)
+            const bridgeBalanceBefore = await balance(address(accounts.bridge));
+            const userBalanceBefore = await balance(address(accounts.alice));
+            const feeCollectorBalanceBefore = await balance(address(accounts.feeCollector));
 
-        const bridgeBalanceBefore = await balance(address(accounts.bridge));
-        const userBalanceBefore = await balance(address(accounts.alice));
-        const feeCollectorBalanceBefore = await balance(address(accounts.feeCollector));
+            const params = {
+                dApp: address(accounts.bridge), 
+                functionName: 'lock',
+                arguments: [
+                    {type:'binary', value: lockId},
+                    {type:'binary', value: recipient},
+                    {type:'binary', value: destination},
+                ],
+                payment: amount
+            }
 
-        const lockTx = await invoke({
-            dApp: address(accounts.bridge), 
-            functionName: 'lock',
-            arguments: [lockId, recipient, destination],
-            payment: amount
-        }, accounts.alice);
-        await waitForTx(lockTx.id);
+            const invalidLockIdArgs = clone(params);
+            invalidLockIdArgs.arguments[0].value = Buffer.from([2, 11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]).toString("base64");
+            await expect(invoke(invalidLockIdArgs, accounts.admin)).to.be.rejectedWith("invalid lockId");
+            
+            const amountTooLowArgs = clone(params);
+            amountTooLowArgs.payment = toWavelet(0.0012);
+            await expect(invoke(amountTooLowArgs, accounts.admin)).to.be.rejectedWith("not enough balance");
 
-        const bridgeBalanceAfter = await balance(address(accounts.bridge));
-        const userBalanceAfter = await balance(address(accounts.alice));
-        const feeCollectorBalanceAfter = await balance(address(accounts.feeCollector));
+            
+            const lockTx = await invokeAndWait(params, accounts.alice);
 
-        expect(bridgeBalanceAfter).equal(bridgeBalanceBefore + amount - fee);
-        expect(userBalanceAfter).equal(userBalanceBefore - amount - lockTx.fee);
-        expect(feeCollectorBalanceAfter).equal(feeCollectorBalanceBefore + fee);
+            const bridgeBalanceAfter = await balance(address(accounts.bridge));
+            const userBalanceAfter = await balance(address(accounts.alice));
+            const feeCollectorBalanceAfter = await balance(address(accounts.feeCollector));
 
-        const lockData = await getLockData(lockId);
+            expect(bridgeBalanceAfter).equal(bridgeBalanceBefore + amount - fee);
+            expect(userBalanceAfter).equal(userBalanceBefore - amount - lockTx.fee);
+            expect(feeCollectorBalanceAfter).equal(feeCollectorBalanceBefore + fee);
 
-        expect(lockData).deep.equal({
-            recipient: recipient.toString('hex'),
-            amount: (amount - fee) * 10, // token precision 8, system precision 9
-            destination: destination.toString(),
-            assetSource: base64ToString(BASE_ASSET_SOURCE_AND_ADDRESS)
+            const lockData = await getLockData(lockId);
+
+            expect(lockData).deep.equal({
+                recipient: recipient,
+                amount: (amount - fee) * 10, // token precision 8, system precision 9
+                destination: destination,
+                assetSource: BASE_ASSET_SOURCE_AND_ADDRESS
+            })
+
+            await expect(invoke(params, accounts.admin)).to.be.rejectedWith("locked");
+
         })
     })
 
-    it('unlock', async function () {
-        const lockId = Buffer.from([1, 11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]).toString("base64");
-        const recipient = ALICE;
-        const amount = 10000;
-        const lockSource = Buffer.from([44, 45, 46, 44]).toString("base64");
-        const tokenSourceAndAddress = BASE_ASSET_SOURCE_AND_ADDRESS;
-        
-        const message = [lockId, recipient, amount, lockSource, tokenSourceAndAddress].join('_');
-        const hashBuffer = wavesCrypto.keccak(Buffer.from(message, "utf-8"));
-        const sign = eth.ecsign(hashBuffer, oracle);
-        const signatureHex = eth.toRpcSig(sign.v, sign.r, sign.s)
+    describe('unlock', () => {
+        it('success', async function () {
+            const lockId = Buffer.from([1, 11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]).toString("base64");
+            const recipient = ALICE;
+            const amount = 10000;
+            const lockSource = Buffer.from([44, 45, 46, 44]).toString("base64");
+            const tokenSourceAndAddress = BASE_ASSET_SOURCE_AND_ADDRESS;
+            const signature = getSigneture(lockId, recipient, amount, lockSource, tokenSourceAndAddress, ORACLE);
 
-        const signature = Buffer.from(signatureHex.slice(2), "hex").toString("base64");
+            const bridgeBalanceBefore = await balance(address(accounts.bridge));
+            const userBalanceBefore = await balance(address(accounts.alice));
 
-        const bridgeBalanceBefore = await balance(address(accounts.bridge));
-        const userBalanceBefore = await balance(address(accounts.alice));
+            const params = {
+                dApp: address(accounts.bridge),
+                functionName: 'unlock',
+                arguments: [
+                    {type:'binary', value: lockId},
+                    {type:'binary', value: recipient},
+                    {type:'integer', value: amount},
+                    {type:'binary', value: lockSource},
+                    {type:'binary', value: tokenSourceAndAddress},
+                    {type:'binary', value: signature},
+                ],
+            }
+            
+            const invalidLockIdArgs = clone(params);
+            invalidLockIdArgs.arguments[0].value = Buffer.from([2, 11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]).toString("base64");
+            await expect(invoke(invalidLockIdArgs, accounts.admin)).to.be.rejectedWith("invalid lockId");
 
-        const unlockTx = await invoke({
-            dApp: address(accounts.bridge),
-            functionName: 'unlock',
-            arguments: [
-                {type:'binary', value: lockId},
-                {type:'binary', value: recipient},
-                {type:'integer', value: amount},
-                {type:'binary', value: lockSource},
-                {type:'binary', value: tokenSourceAndAddress},
-                {type:'binary', value: signature},
-            ],
-        }, accounts.alice);
-        await waitForTx(unlockTx.id);
+            const invalidTokenArgs = clone(params);
+            const invalidTokeSource = Buffer.from([1, 2, 3, 4]).toString("base64");
+            invalidTokenArgs.arguments[4].value =invalidTokeSource ;
+            invalidTokenArgs.arguments[5].value = getSigneture(lockId, recipient, amount, lockSource, invalidTokeSource, ORACLE);
+            await expect(invoke(invalidTokenArgs, accounts.admin)).to.be.rejectedWith("asset not found");
 
-        const bridgeBalanceAfter = await balance(address(accounts.bridge));
-        const userBalanceAfter = await balance(address(accounts.alice));
+            const invalidSignatureArgs = clone(params);
+            invalidSignatureArgs.arguments[2].value = 2000;
+            await expect(invoke(invalidSignatureArgs, accounts.admin)).to.be.rejectedWith("invalid signature");
 
-        const tokenPrecisionAmount = amount / 10;
+            const unlockTx = await invokeAndWait(params, accounts.alice);
 
-        expect(bridgeBalanceAfter).equal(bridgeBalanceBefore - tokenPrecisionAmount);
-        expect(userBalanceAfter).equal(userBalanceBefore + tokenPrecisionAmount - unlockTx.fee);
+            const bridgeBalanceAfter = await balance(address(accounts.bridge));
+            const userBalanceAfter = await balance(address(accounts.alice));
 
-        let unlock = await accountDataByKey(`${lockSource}_${lockId}_u`, address(accounts.validator));
-        expect(unlock.value).equal(true)
+            const tokenPrecisionAmount = amount / 10;
 
+            expect(bridgeBalanceAfter).equal(bridgeBalanceBefore - tokenPrecisionAmount);
+            expect(userBalanceAfter).equal(userBalanceBefore + tokenPrecisionAmount - unlockTx.fee);
+
+            let unlock = await accountDataByKey(`${lockSource}_${lockId}_u`, address(accounts.validator));
+            expect(unlock.value).equal(true)
+
+            await expect(invoke(params, accounts.admin)).to.be.rejectedWith("claimed");
+        })
     })
 })

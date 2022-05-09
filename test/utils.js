@@ -1,4 +1,5 @@
 const BN = require('bn.js')
+const eth = require('ethereumjs-util');
 
 function accountSeedToBase64(accountSeed) {
     return base58ToBase64(address(accountSeed));
@@ -33,7 +34,29 @@ async function broadcastAndWait(tx) {
     return await waitForTx(tx.id);
 }
 
-async function initValidatorContract(oraclePublicKey) {
+async function invokeAndWait(params, seed) {
+    tx = await invoke(params, seed);
+    return await waitForTx(tx.id);
+}
+
+
+function clone(data) {
+    return JSON.parse(JSON.stringify(data))
+}
+
+function getSigneture(lockId, recipient, amount, lockSource, tokenSourceAndAddress, oracle) {
+    const message = [lockId, recipient, amount, lockSource, tokenSourceAndAddress].join('_');
+    const hashBuffer = wavesCrypto.keccak(Buffer.from(message, "utf-8"));
+    const sign = eth.ecsign(hashBuffer, oracle);
+    const signatureHex = eth.toRpcSig(sign.v, sign.r, sign.s)
+    return Buffer.from(signatureHex.slice(2), "hex").toString("base64");
+
+}
+
+async function initValidatorContract() {
+    const oracle = wavesCrypto.randomBytes(32);
+    const oraclePublicKey = eth.privateToPublic(Buffer.from(oracle)).toString("base64");
+
     const script = compile(file('validator.ride'));
     const deployTx = setScript({script}, accounts.validator);
     await broadcastAndWait(deployTx);
@@ -45,6 +68,7 @@ async function initValidatorContract(oraclePublicKey) {
                         {type:'binary', value: oraclePublicKey}]
     }, accounts.admin);
     await waitForTx(initTx.id);
+    return oracle;
 }
 
 async function initBridgeContract() {
@@ -64,19 +88,17 @@ async function initBridgeContract() {
     await waitForTx(initTx.id);
 }
 
-async function getLockData(lockId) {
-    const lockIdStr = lockId.toString('base64');
-    
+async function getLockData(lockIdStr) {
     let lockRecipient = await accountDataByKey(`${lockIdStr}_lr`, address(accounts.validator));
     let lockAmount = await accountDataByKey(`${lockIdStr}_la`, address(accounts.validator));
     let lockDestination = await accountDataByKey(`${lockIdStr}_ld`, address(accounts.validator));
     let lockAssetSource = await accountDataByKey(`${lockIdStr}_las`, address(accounts.validator));
     
     return {
-        recipient: base64ToHex(lockRecipient.value),
-        amount: lockAmount.value,
-        destination: base64ToString(lockDestination.value),
-        assetSource: base64ToString(lockAssetSource.value),
+        recipient: lockRecipient ? base64Normalize(lockRecipient.value) : null,
+        amount: lockAmount ? lockAmount.value : null,
+        destination: lockDestination ? base64Normalize(lockDestination.value) : null,
+        assetSource: lockAssetSource ? base64Normalize(lockAssetSource.value) : null,
     }
 }
 
@@ -112,5 +134,8 @@ module.exports = {
     base64ToString,
     base64ToBuffer,
     getTokenInfo,
-    getAssetId
+    getAssetId,
+    invokeAndWait,
+    getSigneture,
+    clone
 }

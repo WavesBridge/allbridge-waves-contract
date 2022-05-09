@@ -84,7 +84,7 @@ describe('Assets', async function () {
                 {type:'integer', value: 50}]},
         }, accounts.alice);
 
-        expect(broadcast(txFail)).to.be.rejectedWith("unauthorized")
+        await expect(broadcast(txFail)).to.be.rejectedWith("unauthorized")
 
         // Successful admin change
         const txSuccess = await invoke({
@@ -123,7 +123,7 @@ describe('Assets', async function () {
                 {type:'integer', value: 30}]},
         }, accounts.admin);
 
-        expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized")
+        await expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized")
 
         // Successful change back
         const txSuccess1 = await invoke({
@@ -160,26 +160,26 @@ describe('Assets', async function () {
 
         // Wrong signer
         const txFail1 = invokeScript(params, accounts.alice);
-        expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
+        await expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
 
         let paramsFail = JSON.parse(JSON.stringify(params));
 
         // Wrong precision
         paramsFail.call.args[5].value = 7;  
         const txFailPrecision = invokeScript(paramsFail, accounts.admin);
-        expect(broadcast(txFailPrecision)).to.be.rejectedWith("invalid values");
+        await expect(broadcast(txFailPrecision)).to.be.rejectedWith("invalid values");
 
         // Wrong source/address
         paramsFail = JSON.parse(JSON.stringify(params));
         paramsFail.call.args[0].value = NATIVE_ASSET_SOURCE_AND_ADDRESS;  
         const txFailSourceAndAddress = invokeScript(paramsFail, accounts.admin);
-        expect(broadcast(txFailSourceAndAddress)).to.be.rejectedWith("invalid values");
+        await expect(broadcast(txFailSourceAndAddress)).to.be.rejectedWith("invalid values");
 
         // Wrong asset id
         paramsFail = JSON.parse(JSON.stringify(params));
         paramsFail.call.args[1].value = NATIVE_ASSET_ID;  
         const txFailAssetId = invokeScript(paramsFail, accounts.admin);
-        expect(broadcast(txFailAssetId)).to.be.rejectedWith("invalid values");
+        await expect(broadcast(txFailAssetId)).to.be.rejectedWith("invalid values");
 
         // Successfully added
         const tx = invokeScript(params, accounts.admin);
@@ -199,7 +199,7 @@ describe('Assets', async function () {
 
         // Adding the same token again
         const txFail2 = invokeScript(params, accounts.admin);
-        expect(broadcast(txFail2)).to.be.rejectedWith("exists");
+        await expect(broadcast(txFail2)).to.be.rejectedWith("exists");
     })
 
     it('add asset (native)', async function () {
@@ -221,7 +221,7 @@ describe('Assets', async function () {
 
         // Wrong signer
         const txFail1 = invokeScript(params, accounts.alice);
-        expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
+        await expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
 
         // Successfully added
         const tx = invokeScript(params, accounts.admin);
@@ -241,7 +241,7 @@ describe('Assets', async function () {
 
         // Adding the same token again
         const txFail2 = invokeScript(params, accounts.admin);
-        expect(broadcast(txFail2)).to.be.rejectedWith("exists");
+        await expect(broadcast(txFail2)).to.be.rejectedWith("exists");
     });
 
     it('add asset (wrapped)', async function () {
@@ -264,7 +264,7 @@ describe('Assets', async function () {
 
         // Wrong signer
         const txFail1 = invokeScript(params, accounts.alice);
-        expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
+        await expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
 
         // Successfully added
         const tx = invokeScript(params, accounts.admin);
@@ -284,7 +284,7 @@ describe('Assets', async function () {
 
         // Adding the same token again
         const txFail2 = invokeScript(params, accounts.admin);
-        expect(broadcast(txFail2)).to.be.rejectedWith("exists");
+        await expect(broadcast(txFail2)).to.be.rejectedWith("exists");
     });
 
     it('remove (base)', async () => {
@@ -305,7 +305,7 @@ describe('Assets', async function () {
 
         // Wrong signer
         const txFail1 = invokeScript(params, accounts.alice);
-        expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
+        await expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
 
         // Successfully added
         const tx = invokeScript(params, accounts.admin);
@@ -331,7 +331,7 @@ describe('Assets', async function () {
       
         // Remove the same token again
         const txFail2 = invokeScript(params, accounts.admin);
-        expect(broadcast(txFail2)).rejectedWith("not exists");
+        await expect(broadcast(txFail2)).rejectedWith("not exists");
     })
 
     it('remove (native)', async () => {
@@ -351,7 +351,7 @@ describe('Assets', async function () {
 
         // Wrong signer
         const txFail1 = invokeScript(params, accounts.alice);
-        expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
+        await expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
 
         // Successfully added
         const tx = invokeScript(params, accounts.admin);
@@ -377,7 +377,7 @@ describe('Assets', async function () {
       
         // Remove the same token again
         const txFail2 = invokeScript(params, accounts.admin);
-        expect(broadcast(txFail2)).rejectedWith("not exists");
+        await expect(broadcast(txFail2)).rejectedWith("not exists");
     })
 
     it('remove (wrapped)', async () => {
@@ -396,7 +396,7 @@ describe('Assets', async function () {
 
         // Wrong signer
         const txFail1 = invokeScript(params, accounts.alice);
-        expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
+        await expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
 
         // Successfully added
         const tx = invokeScript(params, accounts.admin);
@@ -416,6 +416,6 @@ describe('Assets', async function () {
 
         // Remove the same token again
         const txFail2 = invokeScript(params, accounts.admin);
-        expect(broadcast(txFail2)).rejectedWith("not exists");
+        await expect(broadcast(txFail2)).rejectedWith("not exists");
     })
 })

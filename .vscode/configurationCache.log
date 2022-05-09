@@ -1,0 +1,1 @@
+{"buildTargets":["build-bridge","start-node","test","test-assets","test-bridge","test-validator"],"launchTargets":[],"customConfigurationProvider":{"workspaceBrowse":{"browsePath":[],"compilerArgs":[]},"fileIndex":[]}}

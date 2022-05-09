@@ -1,0 +1,5 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory `/Users/yaroslav/WebstormProjects/allbridge-waves-contract'
+surfboard compile bridge.ride
+make: Leaving directory `/Users/yaroslav/WebstormProjects/allbridge-waves-contract'
+ 

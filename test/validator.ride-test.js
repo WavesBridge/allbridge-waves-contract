@@ -1,5 +1,6 @@
 const eth = require('ethereumjs-util');
 const crypto = require('crypto');
+const { initValidatorContract, invokeAndWait, getSigneture } = require('./utils');
 
 const wvs = 10 ** 8;
 
@@ -9,7 +10,7 @@ describe('Validator', async function () {
 
     let ADMIN = "";
     let BRIDGE = "";
-    const oracle = crypto.randomBytes(32);
+    let ORACLE;
 
     before(async function () {
         await setupAccounts({
@@ -18,40 +19,7 @@ describe('Validator', async function () {
             admin: 0.05 * wvs,
             alice: 0.05 * wvs,
         });
-        const script = compile(file('validator.ride'));
-        const ssTx = setScript({script}, accounts.validator);
-        await broadcast(ssTx);
-        await waitForTx(ssTx.id);
-        console.log('Script has been set');
-
-        ADMIN = Buffer.from(wavesCrypto.base58Decode(address(accounts.admin))).toString("base64");
-        BRIDGE = Buffer.from(wavesCrypto.base58Decode(address(accounts.bridge))).toString("base64");
-
-        const adminTx = invokeScript({
-            dApp: address(accounts.validator),
-            call: {function: "setAdmin", args: [{type:'binary', value: ADMIN}]},
-        }, accounts.admin);
-
-        await broadcast(adminTx);
-        await waitForTx(adminTx.id);
-
-        console.log('Admin set');
-
-        // Calculate oracle public key
-        const publicKey = eth.privateToPublic(oracle).toString("base64");
-        
-        const configTx = invokeScript({
-            dApp: address(accounts.validator),
-            call: {function: "setConfig", args: [
-                {type:'binary', value: VERSION},
-                {type:'binary', value: BRIDGE},
-                {type:'binary', value: publicKey},
-            ]},
-        }, accounts.admin);
-
-        await broadcast(configTx);
-        await waitForTx(configTx.id);
-
+        ORACLE = await initValidatorContract()
         console.log('Config set');
     });
 
@@ -61,17 +29,13 @@ describe('Validator', async function () {
         const amount = 1000;
         const lockSource = Buffer.from([11, 22, 33, 44]).toString("base64");
         const tokenSourceAndAddress = Buffer.from([11, 22, 33, 44, 55]).toString("base64");
-        
-        const message = [lockId, recipient, amount, lockSource, tokenSourceAndAddress].join('_');
-        const hashBuffer = wavesCrypto.keccak(Buffer.from(message, "utf-8"));
-        const sign = eth.ecsign(hashBuffer, oracle);
-        const signatureHex = eth.toRpcSig(sign.v, sign.r, sign.s)
 
-        const signature = Buffer.from(signatureHex.slice(2), "hex").toString("base64");
+        const signature = getSigneture(lockId, recipient, amount, lockSource, tokenSourceAndAddress, ORACLE);
 
-        const unlockTx = invokeScript({
+        await invokeAndWait({
             dApp: address(accounts.validator),
-            call: {function: "createUnlock", args: [
+            functionName: "createUnlock", 
+            arguments: [
                 {type:'binary', value: lockId},
                 {type:'binary', value: recipient},
                 {type:'integer', value: amount},
@@ -79,9 +43,6 @@ describe('Validator', async function () {
                 {type:'binary', value: tokenSourceAndAddress},
                 {type:'binary', value: signature},
             ]},
-        }, accounts.bridge);
-
-        await broadcast(unlockTx);
-        await waitForTx(unlockTx.id);
+        accounts.bridge);
     });
 });
