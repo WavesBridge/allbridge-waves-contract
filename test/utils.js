@@ -86,6 +86,8 @@ async function initBridgeContract() {
                     {type:'integer', value: 30}],
     }, accounts.admin)
     await waitForTx(initTx.id);
+    await setManager('ASSET_MANAGER', accounts.admin);
+    await setManager('STOP_MANAGER', accounts.admin);
 }
 
 async function getLockData(lockIdStr) {
@@ -117,8 +119,25 @@ async function getTokenInfo(assetIdStr) {
     }
 }
 
+async function setManager(managerType, seed) {
+    return invokeAndWait({
+        dApp: address(accounts.bridge),
+        functionName: "setManager",
+        arguments: [
+            {type: 'string', value: managerType},
+            {type: 'binary', value: accountSeedToBase64(seed)}
+        ] 
+    }, accounts.admin)
+}
+
 async function getAssetId(source) {
     let recordSource = await accountDataByKey(`${source}_aa`, address(accounts.bridge));
+    return recordSource ? base64Normalize(recordSource.value) : null
+}
+
+
+async function getManager(managerType) {
+    let recordSource = await accountDataByKey(`${managerType}_m`, address(accounts.bridge));
     return recordSource ? base64Normalize(recordSource.value) : null
 }
 
@@ -137,5 +156,8 @@ module.exports = {
     getAssetId,
     invokeAndWait,
     getSigneture,
-    clone
+    clone,
+    setManager,
+    base64Normalize,
+    getManager
 }

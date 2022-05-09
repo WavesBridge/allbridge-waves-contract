@@ -17,7 +17,7 @@ let keyIsActive = "_ia"
 let keyManager = "_m"
 
 let BRIDGE_MANAGER = "BRIDGE_MANAGER"
-let TOKEN_MANAGER = "TOKEN_MANAGER"
+let ASSET_MANAGER = "ASSET_MANAGER"
 let STOP_MANAGER = "STOP_MANAGER"
 
 let baseAssetSourceAndAddress = base64'V0FWRVdBVkU='   # 0x57415645 57415645
@@ -30,6 +30,7 @@ let systemPrecision = 9
 
 let errUnauthorized = "unauthorized"
 let errUninitialized = "uninitialized"
+let errInitialized = "initialized"
 let errAlreadyExists = "exists"
 let errNotExists = "not exists"
 let errInvalidValues = "invalid values"
@@ -37,22 +38,35 @@ let errNotOnePayment = "not one payment"
 let errAssetNotFound = "asset not found"
 let errNotEnoughBalance = "not enough balance"
 let errBigPowValue = "pow value too big"
+let errBridgeDisabled = "birdge is disabled"
+let errAssetDisabled = "asset is disabled"
 
 let typeBase = 0
 let typeNative = 1
 let typeWrapped = 2
 
-func invalidCaller(i: Invocation, key: String) = {
-    match getBinary(key) {
-        case authority: ByteVector => (authority != i.caller.bytes)
-        case _ => false
+func assertCallerIsManager(i: Invocation, managerType: String) = {
+    match getBinary(managerType + keyManager) {
+        case authority: ByteVector => if (authority != i.caller.bytes) 
+            then throw(errUnauthorized) 
+            else unit
+        case _ => throw(errUninitialized)
     }
 }
 
-func assertCallerIsManager(i: Invocation, managerType: String) = {
-    if (invalidCaller(i, managerType + keyManager)) 
-        then throw(errUnauthorized)
+func assertBridgeIsActive() = {
+    if (!getBoolean(keyIsActive).valueOrElse(false)) 
+        then throw(errBridgeDisabled)
         else unit
+}
+
+func assertAssetIsActive(assetIdStr: String) = {
+    match getBoolean(assetIdStr + keyAssetIsActive) {
+        case isActive: Boolean => if (isActive) 
+            then unit
+            else throw(errAssetDisabled)
+        case _ => throw(errAssetNotFound)
+    }
 }
 
 func getFee(amount: Int, assetIdStr: String) = {
@@ -89,13 +103,18 @@ func fromSystemPrecision(amount: Int, precision: Int) = {
 
 @Callable(i)
 func setConfig(admin: ByteVector, validatorAddress: ByteVector, feeCollector: ByteVector, unlockSigner: ByteVector, baseFeeRateBP: Int) = {
-    strict callerCheck = assertCallerIsManager(i, BRIDGE_MANAGER + keyManager)
+    # Can be called only once
+    if (getBinary(BRIDGE_MANAGER + keyManager).isDefined())
+        then throw(errInitialized)
+        else 
+
     [
         BinaryEntry(BRIDGE_MANAGER + keyManager, admin),
         BinaryEntry(keyValidator, validatorAddress),
         BinaryEntry(keyFeeCollector, feeCollector),
         BinaryEntry(keyUnlockSigner, unlockSigner),
-        IntegerEntry(ketBaseFeeRateBP, baseFeeRateBP)
+        IntegerEntry(ketBaseFeeRateBP, baseFeeRateBP),
+        BooleanEntry(keyIsActive, true)
     ]
 }
 
@@ -109,7 +128,7 @@ func addAsset(
     precision: Int,
     minFee: Int) = {
 
-    strict callerCheck = assertCallerIsManager(i, BRIDGE_MANAGER + keyManager)
+    strict callerCheck = i.assertCallerIsManager(ASSET_MANAGER)
 
     let (actions, assetId) = if (type == typeBase) then {
         # Check values for the base coin
@@ -140,7 +159,8 @@ func addAsset(
             BinaryEntry(keyNativeAddress, assetSourceAndAddress),
             IntegerEntry(assetIdStr + keyAssetType, type),
             IntegerEntry(assetIdStr + keyAssetPrecision, precision),
-            IntegerEntry(assetIdStr + keyAssetMinFee, minFee)
+            IntegerEntry(assetIdStr + keyAssetMinFee, minFee),
+            BooleanEntry(assetIdStr + keyAssetIsActive, true)
         ]
 }
 
@@ -149,7 +169,7 @@ func removeAsset(
     assetSourceAndAddress: ByteVector,  # First 4 bytes are token source, then up to 32 byte address
     newAuthority: ByteVector
 ) = {
-    strict callerCheck = assertCallerIsManager(i, BRIDGE_MANAGER + keyManager)
+    strict callerCheck = i.assertCallerIsManager(ASSET_MANAGER)
     
     let keySourceAddress = assetSourceAndAddress.toBase64String() + keyAssetAddress
     let assetId = getBinary(keySourceAddress).valueOrErrorMessage(errNotExists)
@@ -178,17 +198,23 @@ func removeAsset(
         DeleteEntry(assetIdStr + keyAssetAddress),
         DeleteEntry(assetIdStr + keyAssetType),
         DeleteEntry(assetIdStr + keyAssetPrecision),
-        DeleteEntry(assetIdStr + keyAssetMinFee)
+        DeleteEntry(assetIdStr + keyAssetMinFee),
+        DeleteEntry(assetIdStr + keyAssetIsActive)
     ]
 }
 
 @Callable(i)
 func lock(lockId: ByteVector, recipient: ByteVector, destination: ByteVector) = {
+    strict birdgeCheck = assertBridgeIsActive()
+
     if (i.payments.size() != 1) 
         then throw(errNotOnePayment) 
         else 
     let assetId = valueOrElse(i.payments[0].assetId, baseAssetId)
     let assetIdStr = assetId.toBase64String()
+
+    strict assetCheck = assertAssetIsActive(assetIdStr)
+
     let amount = i.payments[0].amount
     let validatorAddress = getBinary(keyValidator).valueOrErrorMessage(errUninitialized)
     let fee = getFee(amount, assetIdStr)
@@ -228,75 +254,103 @@ func unlock(lockId: ByteVector,
     lockSource: ByteVector,
     assetSourceAndAddress: ByteVector,
     signature: ByteVector) = {
-        let assetId = getBinary(assetSourceAndAddress.toBase64String() + keyAssetAddress).valueOrErrorMessage(errAssetNotFound)
-        let assetIdStr = assetId.toBase64String()
-        let type = getInteger(assetIdStr + keyAssetType).valueOrErrorMessage(errAssetNotFound)
-        let precision = getInteger(assetIdStr + keyAssetPrecision).valueOrErrorMessage(errAssetNotFound)
-        let validatorAddress = getBinary(keyValidator).valueOrErrorMessage(errUninitialized)
-        let unlockSigner = getBinary(keyUnlockSigner).valueOrErrorMessage(errUninitialized)
-        let feeCollector = getBinary(keyFeeCollector).valueOrErrorMessage(errUninitialized)
 
-        strict createUnlock = invoke(Address(validatorAddress), "createUnlock", [
-            lockId, 
-            recipient, 
-            amount, 
-            lockSource, 
-            assetSourceAndAddress, 
-            signature], [])
+    strict birdgeCheck = assertBridgeIsActive()
 
-        let isValid = match (createUnlock) {
-            case v:Boolean => v
-            case _ => false
-          }
-        if (!isValid) then {
-            throw(errInvalidValues)
-        } else 
+    let assetId = getBinary(assetSourceAndAddress.toBase64String() + keyAssetAddress).valueOrErrorMessage(errAssetNotFound)
+    let assetIdStr = assetId.toBase64String()
+    let type = getInteger(assetIdStr + keyAssetType).valueOrErrorMessage(errAssetNotFound)
+    let precision = getInteger(assetIdStr + keyAssetPrecision).valueOrErrorMessage(errAssetNotFound)
+    let validatorAddress = getBinary(keyValidator).valueOrErrorMessage(errUninitialized)
+    let unlockSigner = getBinary(keyUnlockSigner).valueOrErrorMessage(errUninitialized)
+    let feeCollector = getBinary(keyFeeCollector).valueOrErrorMessage(errUninitialized)
 
-        let fee = if (unlockSigner == i.caller.bytes) 
-            then getInteger(assetIdStr + keyAssetMinFee).valueOrErrorMessage(errAssetNotFound)
-            else 0
-        let amountToSend = amount.fromSystemPrecision(precision);
-        let amountToSendWithoutFee = amountToSend - fee;
-        if (amountToSendWithoutFee <= 0) then {
-            throw(errNotEnoughBalance)
-        } else
+    strict createUnlock = invoke(Address(validatorAddress), "createUnlock", [
+        lockId, 
+        recipient, 
+        amount, 
+        lockSource, 
+        assetSourceAndAddress, 
+        signature], [])
 
-        if (type == typeBase) then {
-            [ScriptTransfer(Address(recipient), amountToSendWithoutFee, unit)] ++
-            if (fee > 0) then [ScriptTransfer(Address(feeCollector), fee, unit)] else []
-        } else if (type == typeNative) then {
-            [ScriptTransfer(Address(recipient), amountToSendWithoutFee, assetId)] ++
-            if (fee > 0) then [ScriptTransfer(Address(feeCollector), fee, assetId)] else []
-        } else if (type == typeWrapped) then {
-            [
-                Reissue(assetId, amountToSend, true),
-                ScriptTransfer(Address(recipient), amountToSendWithoutFee, assetId)
-            ] ++
-            if (fee > 0) then [ScriptTransfer(Address(feeCollector), fee, assetId)] else []
-        } else throw(errInvalidValues)
+    let isValid = match (createUnlock) {
+        case v:Boolean => v
+        case _ => false
+        }
+    if (!isValid) then {
+        throw(errInvalidValues)
+    } else 
+
+    let fee = if (unlockSigner == i.caller.bytes) 
+        then getInteger(assetIdStr + keyAssetMinFee).valueOrErrorMessage(errAssetNotFound)
+        else 0
+    let amountToSend = amount.fromSystemPrecision(precision);
+    let amountToSendWithoutFee = amountToSend - fee;
+    if (amountToSendWithoutFee <= 0) then {
+        throw(errNotEnoughBalance)
+    } else
+
+    if (type == typeBase) then {
+        [ScriptTransfer(Address(recipient), amountToSendWithoutFee, unit)] ++
+        if (fee > 0) then [ScriptTransfer(Address(feeCollector), fee, unit)] else []
+    } else if (type == typeNative) then {
+        [ScriptTransfer(Address(recipient), amountToSendWithoutFee, assetId)] ++
+        if (fee > 0) then [ScriptTransfer(Address(feeCollector), fee, assetId)] else []
+    } else if (type == typeWrapped) then {
+        [
+            Reissue(assetId, amountToSend, true),
+            ScriptTransfer(Address(recipient), amountToSendWithoutFee, assetId)
+        ] ++
+        if (fee > 0) then [ScriptTransfer(Address(feeCollector), fee, assetId)] else []
+    } else throw(errInvalidValues)
 }
 
 @Callable(i)
 func setManager(managerType: String, manager: ByteVector) = {
-    strict callerCheck = assertCallerIsManager(i, BRIDGE_MANAGER + keyManager)
+    strict callerCheck = i.assertCallerIsManager(BRIDGE_MANAGER)
     [BinaryEntry(managerType + keyManager, manager)]
 }
 
 @Callable(i)
+func setFeeCollector(feeCollector: ByteVector) = {
+    strict callerCheck = i.assertCallerIsManager(BRIDGE_MANAGER)
+    [BinaryEntry(keyFeeCollector, feeCollector)]
+}
+
+@Callable(i)
+func setValidator(validator: ByteVector) = {
+    strict callerCheck = i.assertCallerIsManager(BRIDGE_MANAGER)
+    [BinaryEntry(keyValidator, validator)]
+}
+
+@Callable(i)
 func startBridge() = {
-    strict callerCheck = assertCallerIsManager(i, BRIDGE_MANAGER + keyManager)
+    strict callerCheck = i.assertCallerIsManager(BRIDGE_MANAGER)
     [BooleanEntry(keyIsActive, true)]
 }
 
 @Callable(i)
+func stopBridge() = {
+    strict callerCheck = i.assertCallerIsManager(STOP_MANAGER)
+    [BooleanEntry(keyIsActive, false)]
+}
+
+@Callable(i)
 func setMinFee(assetId: ByteVector, minFee: Int) = {
-    strict callerCheck = assertCallerIsManager(i, BRIDGE_MANAGER + keyManager)
+    strict callerCheck = i.assertCallerIsManager(BRIDGE_MANAGER)
     let assetIdStr = assetId.toBase64String()
     [IntegerEntry(assetIdStr + keyAssetMinFee, minFee)]
 }
 
 @Callable(i)
 func setBaseFeeRate(baseFeeRateBP: Int) = {
-    strict callerCheck = assertCallerIsManager(i, BRIDGE_MANAGER + keyManager)
+    strict callerCheck = i.assertCallerIsManager(BRIDGE_MANAGER)
     [IntegerEntry(ketBaseFeeRateBP, baseFeeRateBP)]
+}
+
+@Callable(i)
+func setAssetState(assetId: ByteVector, state: Boolean) = {
+    strict callerCheck = i.assertCallerIsManager(BRIDGE_MANAGER)
+    let assetIdStr = assetId.toBase64String()
+    [BooleanEntry(assetIdStr + keyAssetIsActive, state)]
 }

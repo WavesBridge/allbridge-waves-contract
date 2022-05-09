@@ -8,5 +8,7 @@ test-assets:
 	surfboard test assets.ride-test.js
 test-validator:
 	surfboard test validator.ride-test.js
+test-manager:
+	surfboard test manager.ride-test.js
 test:
 	surfboard test
