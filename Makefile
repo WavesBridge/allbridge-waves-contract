@@ -12,3 +12,5 @@ test-manager:
 	surfboard test manager.ride-test.js
 test:
 	surfboard test
+deploy:
+	surfboard run ./scripts/bridge.deploy.js --env=testnet

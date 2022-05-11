@@ -21,18 +21,21 @@ let errAlreadyLocked = "locked"
 let errBridgeOnly = "not bridge"
 let errInvalidLockId = "invalid lockId"
 
-func invalidCaller(i: Invocation, key: String) = {
+let chainWaves = "V0FWRQ==" # 0x57415645
+
+
+func assertCaller(i: Invocation, key: String) = {
     match getBinary(key) {
-        case authority: ByteVector => (authority != i.caller.bytes)
-        case _ => false
+        case authority: ByteVector => if (authority != i.caller.bytes) 
+            then throw(errUnauthorized) 
+            else unit
+        case _ => throw(errUninitialized)
     }
 }
 
-func assertCallerIsBridge(i: Invocation) = {
-    if (invalidCaller(i, keyBridge)) 
-        then throw(errBridgeOnly)
-        else unit
-}
+func assertCallerIsBridge(i: Invocation) = assertCaller(i, keyBridge)
+func assertCallerIsAdmin(i: Invocation) = assertCaller(i, keyAdmin)
+
 
 func assertValidLockId(lockId: ByteVector) = {
     let version = getBinary(keyVersion).valueOrErrorMessage(errUninitialized)
@@ -49,15 +52,8 @@ func assertLockNotExists(lockRecipientKey: String) = {
 }
 
 @Callable(i)
-func setAdmin(newAdmin: ByteVector) = {
-    if (invalidCaller(i, keyAdmin)) 
-        then throw(errUnauthorized) 
-        else [BinaryEntry(keyAdmin, newAdmin)]
-}
-
-@Callable(i)
 func setConfig(version: ByteVector, bridge: ByteVector, oracle: ByteVector) = {
-    if (invalidCaller(i, keyAdmin)) 
+    if (getBinary(keyAdmin).isDefined())  # Can be called only once
         then throw(errUnauthorized) 
         else [
             BinaryEntry(keyVersion, version),
@@ -82,17 +78,18 @@ func createUnlock(
     let lockIdStr = lockId.toBase64String();
     let lockSourceStr = lockSource.toBase64String();
     let unlockKey = lockSourceStr + "_" + lockIdStr + keyUnlock
-    if (isDefined(getBoolean(unlockKey)))
+    if (getBoolean(unlockKey).isDefined())
         then throw(errAlreadyClaimed)
         else
 
     # Construct message
     let message = [
-        lockId.toBase64String(),
+        lockIdStr,
         recipient.toBase64String(),
         amount.toString(),
-        lockSource.toBase64String(),
-        tokenSourceAndAddress.toBase64String()
+        lockSourceStr,
+        tokenSourceAndAddress.toBase64String(),
+        chainWaves
     ].makeString("_")
     
     # Check signature
@@ -128,4 +125,22 @@ func createLock(
         BinaryEntry(lockIdStr + keyLockDestination, lockDestination),
         BinaryEntry(lockIdStr + keyLockAssetSource, tokenSourceAndAddress)
     ]
+}
+
+@Callable(i)
+func setAdmin(newAdmin: ByteVector) = {
+    strict checkCaller = assertCallerIsAdmin(i)
+    [BinaryEntry(keyAdmin, newAdmin)]
+}
+
+@Callable(i)
+func setOracle(newOracle: ByteVector) = {
+    strict checkCaller = assertCallerIsAdmin(i)
+    [BinaryEntry(keyOracle, newOracle)]
+}
+
+@Callable(i)
+func setBridge(newBridge: ByteVector) = {
+    strict checkCaller = assertCallerIsAdmin(i)
+    [BinaryEntry(keyBridge, newBridge)]
 }

@@ -8,7 +8,7 @@ let keyAssetPrecision = "_ap"
 let keyAssetMinFee = "_amf"
 let keyAssetIsActive = "_aia"
 
-let ketBaseFeeRateBP = "_bfr"
+let keyBaseFeeRateBP = "_bfr"
 
 let keyValidator = "_v"
 let keyFeeCollector = "_fc"
@@ -20,8 +20,8 @@ let BRIDGE_MANAGER = "BRIDGE_MANAGER"
 let ASSET_MANAGER = "ASSET_MANAGER"
 let STOP_MANAGER = "STOP_MANAGER"
 
-let baseAssetSourceAndAddress = base64'V0FWRVdBVkU='   # 0x57415645 57415645
-let baseAssetId = base64'V0FWRQ==' # 0x57415645
+let baseAssetSourceAndAddress = base64'V0FWRVdBVkUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'   # 0x57415645 5741564500000000000000000000000000000000000000000000000000000000
+let baseAssetId = base64'V0FWRQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=' # 0x5741564500000000000000000000000000000000000000000000000000000000
 
 let chainWaves = base64'V0FWRQ==' # 0x57415645
 
@@ -40,6 +40,7 @@ let errNotEnoughBalance = "not enough balance"
 let errBigPowValue = "pow value too big"
 let errBridgeDisabled = "birdge is disabled"
 let errAssetDisabled = "asset is disabled"
+let errWrongDestinationChain = "wrong destination chain"
 
 let typeBase = 0
 let typeNative = 1
@@ -70,7 +71,7 @@ func assertAssetIsActive(assetIdStr: String) = {
 }
 
 func getFee(amount: Int, assetIdStr: String) = {
-    let baseFeeRateBP = getInteger(ketBaseFeeRateBP).valueOrErrorMessage(errUninitialized)
+    let baseFeeRateBP = getInteger(keyBaseFeeRateBP).valueOrErrorMessage(errUninitialized)
     let minFee = getInteger(assetIdStr + keyAssetMinFee).valueOrErrorMessage(errAssetNotFound)
     let fee = amount * baseFeeRateBP / BP
     if (fee < minFee) then minFee else fee
@@ -113,7 +114,7 @@ func setConfig(admin: ByteVector, validatorAddress: ByteVector, feeCollector: By
         BinaryEntry(keyValidator, validatorAddress),
         BinaryEntry(keyFeeCollector, feeCollector),
         BinaryEntry(keyUnlockSigner, unlockSigner),
-        IntegerEntry(ketBaseFeeRateBP, baseFeeRateBP),
+        IntegerEntry(keyBaseFeeRateBP, baseFeeRateBP),
         BooleanEntry(keyIsActive, true)
     ]
 }
@@ -170,7 +171,7 @@ func removeAsset(
     newAuthority: ByteVector
 ) = {
     strict callerCheck = i.assertCallerIsManager(ASSET_MANAGER)
-    
+
     let keySourceAddress = assetSourceAndAddress.toBase64String() + keyAssetAddress
     let assetId = getBinary(keySourceAddress).valueOrErrorMessage(errNotExists)
     let assetIdStr = toBase64String(assetId)
@@ -207,6 +208,10 @@ func removeAsset(
 func lock(lockId: ByteVector, recipient: ByteVector, destination: ByteVector) = {
     strict birdgeCheck = assertBridgeIsActive()
 
+    if (destination == chainWaves) 
+        then throw(errWrongDestinationChain)
+        else 
+    
     if (i.payments.size() != 1) 
         then throw(errNotOnePayment) 
         else 
@@ -345,7 +350,7 @@ func setMinFee(assetId: ByteVector, minFee: Int) = {
 @Callable(i)
 func setBaseFeeRate(baseFeeRateBP: Int) = {
     strict callerCheck = i.assertCallerIsManager(BRIDGE_MANAGER)
-    [IntegerEntry(ketBaseFeeRateBP, baseFeeRateBP)]
+    [IntegerEntry(keyBaseFeeRateBP, baseFeeRateBP)]
 }
 
 @Callable(i)

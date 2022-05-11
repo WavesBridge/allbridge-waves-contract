@@ -45,17 +45,19 @@ function clone(data) {
 }
 
 function getSigneture(lockId, recipient, amount, lockSource, tokenSourceAndAddress, oracle) {
-    const message = [lockId, recipient, amount, lockSource, tokenSourceAndAddress].join('_');
+    const message = [lockId, recipient, amount, lockSource, tokenSourceAndAddress, Buffer.from('WAVE').toString('base64')].join('_');
+
     const hashBuffer = wavesCrypto.keccak(Buffer.from(message, "utf-8"));
+    
     const sign = eth.ecsign(hashBuffer, oracle);
     const signatureHex = eth.toRpcSig(sign.v, sign.r, sign.s)
     return Buffer.from(signatureHex.slice(2), "hex").toString("base64");
-
 }
 
-async function initValidatorContract() {
-    const oracle = wavesCrypto.randomBytes(32);
+async function initValidatorContract(oracle) {
+    oracle = oracle || wavesCrypto.randomBytes(32);
     const oraclePublicKey = eth.privateToPublic(Buffer.from(oracle)).toString("base64");
+
 
     const script = compile(file('validator.ride'));
     const deployTx = setScript({script}, accounts.validator);

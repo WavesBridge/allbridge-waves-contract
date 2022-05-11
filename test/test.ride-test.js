@@ -1,3 +1,5 @@
+const { getSigneture } = require("./utils");
+
 const wvs = 10 ** 8;
 
 describe('Bridge', async() => {
@@ -21,20 +23,6 @@ describe('Bridge', async() => {
     })
 
     it('test', async function () {
-        const base64 = Buffer.from(wavesCrypto.base58Decode(address(accounts.bridge))).toString("base64");
-        const txSuccess = invokeScript({
-            dApp: address(accounts.assets),
-            call: {function: "removeAsset", args: [
-                {type:'binary', value: base64},
-                {type:'binary', value: base64}
-            ]},
-        }, accounts.admin);
-        
-        const br = await broadcast(txSuccess);
-        const w = await waitForTx(txSuccess.id);
-        let a = await accountDataByKey(`TEST`, address(accounts.assets));
-        let b = await accountDataByKey(`TEST2`, address(accounts.assets));
-        console.log(a);
-        console.log(b);
+       getSigneture("")
     })
 })

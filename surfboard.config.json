@@ -11,8 +11,13 @@
         "testnet": {
             "API_BASE": "https://nodes-testnet.wavesnodes.com/",
             "CHAIN_ID": "T",
-            "SEED": "defense middle agent timber scrub budget among involve maximum sugar shiver ask",
-            "timeout": 60000
+            "timeout": 60000,
+            "BRIDGE_SEED": "traffic text trade nest gather spring indicate doll image damage soup axis tree normal involve",
+            "VALIDATOR_SEED": "olympic broccoli walnut pepper hour cricket pupil mobile prosper crunch erosion boring pen rifle matrix",
+            "MANAGER_SEED": "drip unique liberty grow shine wild dignity push crush fit apart leader cousin omit analyst",
+            "ORACLE": "d180f2ab3dad6264d09c0deb127edbd18d997ff0de8bc53f7f0b0be1464e1be4d1514ce74ed9afc7fef445308d3f323dffb2ae909aa7f0208a94376ec6fe6235",
+            "FEE_COLLECTOR": "3N24ezBeDW3HQEJqzbGLF1cYQAjDbQ7yMZy",
+            "UNLOCK_SIGNER": "3N1Z6tjA4HwBKBGCtTmXx6uMsJxTaiWtkpi"
         }
     },
     "defaultEnv": "custom",
