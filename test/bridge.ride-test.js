@@ -82,7 +82,7 @@ describe('Assets', async function () {
         it('lock', async function () {
             const fee = 1000000;
             await invokeAndWait({dApp: address(accounts.bridge), functionName: 'addAsset', arguments: [
-                base64Decode(BASE_ASSET_SOURCE_AND_ADDRESS), base64Decode(BASE_ASSET_ID), TYPE_BASE, "", "", 8, fee
+                base64Decode(BASE_ASSET_SOURCE_AND_ADDRESS), base64Decode(BASE_ASSET_ID), fee
             ]}, accounts.admin);
             
             const lockId = Buffer.from(new Array(16).fill(1)).toString('base64')

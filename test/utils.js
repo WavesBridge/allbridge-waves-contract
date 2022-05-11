@@ -65,7 +65,7 @@ async function initValidatorContract(oracle) {
 
     const initTx = await invoke({
         dApp: address(accounts.validator),
-        functionName: 'setConfig',
+        functionName: 'init',
         arguments: [[1], {type:'binary', value: accountSeedToBase64(accounts.bridge)}, 
                         {type:'binary', value: oraclePublicKey}]
     }, accounts.admin);
@@ -80,7 +80,7 @@ async function initBridgeContract() {
 
     const initTx = await invoke({
         dApp: address(accounts.bridge),
-        functionName: "setConfig", 
+        functionName: "init", 
         arguments: [{type:'binary', value: accountSeedToBase64(accounts.admin)}, 
                     {type:'binary', value: accountSeedToBase64(accounts.validator)},
                     {type:'binary', value: accountSeedToBase64(accounts.feeCollector)},

@@ -52,7 +52,7 @@ func assertLockNotExists(lockRecipientKey: String) = {
 }
 
 @Callable(i)
-func setConfig(version: ByteVector, bridge: ByteVector, oracle: ByteVector) = {
+func init(version: ByteVector, bridge: ByteVector, oracle: ByteVector) = {
     if (getBinary(keyAdmin).isDefined())  # Can be called only once
         then throw(errUnauthorized) 
         else [

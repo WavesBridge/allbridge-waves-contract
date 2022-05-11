@@ -1,4 +1,4 @@
-const {accountSeedToBase64, toWavelet, broadcastAndWait, base58ToBase64, initBridgeContract, getTokenInfo, getAssetId} = require('./utils');
+const {accountSeedToBase64, toWavelet, broadcastAndWait, base58ToBase64, initBridgeContract, getTokenInfo, getAssetId, invokeAndWait} = require('./utils');
 
 const NATIVE_ASSET_SOURCE = Buffer.from("POL\0")
 const NATIVE_ASSET_ADDRESS = Buffer.from("1122334455667788990011223344556677889900", "hex")
@@ -81,10 +81,6 @@ describe('Assets', async function () {
                 args: [
                     {type:'binary', value: BASE_ASSET_SOURCE_AND_ADDRESS},
                     {type:'binary', value: BASE_ASSET_ID},
-                    {type:'integer', value: TYPE_BASE},
-                    {type:'string', value: ""},
-                    {type:'string', value: ""},
-                    {type:'integer', value: 8},
                     {type:'integer', value: 1000000},
                 ]
             },
@@ -96,22 +92,11 @@ describe('Assets', async function () {
 
         let paramsFail = JSON.parse(JSON.stringify(params));
 
-        // Wrong precision
-        paramsFail.call.args[5].value = 7;  
-        const txFailPrecision = invokeScript(paramsFail, accounts.admin);
-        await expect(broadcast(txFailPrecision)).to.be.rejectedWith("invalid values");
-
         // Wrong source/address
         paramsFail = JSON.parse(JSON.stringify(params));
         paramsFail.call.args[0].value = NATIVE_ASSET_SOURCE_AND_ADDRESS;  
         const txFailSourceAndAddress = invokeScript(paramsFail, accounts.admin);
         await expect(broadcast(txFailSourceAndAddress)).to.be.rejectedWith("invalid values");
-
-        // Wrong asset id
-        paramsFail = JSON.parse(JSON.stringify(params));
-        paramsFail.call.args[1].value = NATIVE_ASSET_ID;  
-        const txFailAssetId = invokeScript(paramsFail, accounts.admin);
-        await expect(broadcast(txFailAssetId)).to.be.rejectedWith("invalid values");
 
         // Successfully added
         const tx = invokeScript(params, accounts.admin);
@@ -142,10 +127,6 @@ describe('Assets', async function () {
                 args: [
                     {type:'binary', value: NATIVE_ASSET_SOURCE_AND_ADDRESS},
                     {type:'binary', value: NATIVE_ASSET_ID},
-                    {type:'integer', value: TYPE_NATIVE},
-                    {type:'string', value: ""},
-                    {type:'string', value: ""},
-                    {type:'integer', value: 8},
                     {type:'integer', value: 1000000},
                 ]
             },
@@ -177,17 +158,27 @@ describe('Assets', async function () {
     });
 
     it('add asset (wrapped)', async function () {
+        const addedToken = await broadcastAndWait(invokeScript({
+            dApp: address(accounts.bridge),
+            call: {
+                function: "issue",
+                args: [
+                    {type:'string', value: "Wrapped name"},
+                    {type:'string', value: "Wrapped description"},
+                    {type:'integer', value: 6},
+                ]
+            },
+            fee: "100500000"}, accounts.admin))
+
+        const assetId = base58ToBase64(addedToken.stateChanges.issues[0].assetId);
+
         const params = {
             dApp: address(accounts.bridge),
             call: {
                 function: "addAsset",
                 args: [
                     {type:'binary', value: WRAPPED_ASSET_SOURCE_AND_ADDRESS},
-                    {type:'binary', value: ""},
-                    {type:'integer', value: TYPE_WRAPPED},
-                    {type:'string', value: "Wrapped name"},
-                    {type:'string', value: "Wrapped description"},
-                    {type:'integer', value: 6},
+                    {type:'binary', value: assetId},
                     {type:'integer', value: 1000000},
                 ]
             },
@@ -203,8 +194,7 @@ describe('Assets', async function () {
 
         await broadcastAndWait(tx);
 
-        const assetId = await getAssetId(WRAPPED_ASSET_SOURCE_AND_ADDRESS);
-        expect(assetId).not.to.be.equal('');
+        expect(await getAssetId(WRAPPED_ASSET_SOURCE_AND_ADDRESS)).to.be.equal(assetId);
 
         const tokenInfo = await getTokenInfo(assetId);
         expect(tokenInfo).deep.equal({

@@ -103,7 +103,7 @@ func fromSystemPrecision(amount: Int, precision: Int) = {
 }
 
 @Callable(i)
-func setConfig(admin: ByteVector, validatorAddress: ByteVector, feeCollector: ByteVector, unlockSigner: ByteVector, baseFeeRateBP: Int) = {
+func init(admin: ByteVector, validatorAddress: ByteVector, feeCollector: ByteVector, unlockSigner: ByteVector, baseFeeRateBP: Int) = {
     # Can be called only once
     if (getBinary(BRIDGE_MANAGER + keyManager).isDefined())
         then throw(errInitialized)
@@ -122,47 +122,44 @@ func setConfig(admin: ByteVector, validatorAddress: ByteVector, feeCollector: By
 @Callable(i)
 func addAsset(
     assetSourceAndAddress: ByteVector,  # First 4 bytes are token source, then up to 32 byte address
-    assetIdArg: ByteVector,
-    type: Int,
-    name: String, # Only required if creating wrapped tokens
-    description: String, # Only required if creating wrapped tokens
-    precision: Int,
+    assetId: ByteVector,
     minFee: Int) = {
 
     strict callerCheck = i.assertCallerIsManager(ASSET_MANAGER)
 
-    let (actions, assetId) = if (type == typeBase) then {
-        # Check values for the base coin
-        if (assetSourceAndAddress != baseAssetSourceAndAddress || assetIdArg != baseAssetId || precision != 8) 
+    let (type, precision) = if (assetId == baseAssetId) then {
+        if (assetSourceAndAddress != baseAssetSourceAndAddress) 
             then throw(errInvalidValues)
-            else ([], assetIdArg)
-    } else if (type == typeNative) then {
-        # Just return supplied value if native
-        ([], assetIdArg)
-    } else if (type == typeWrapped) then {
-        # Issue new token only if no asset ID is supplied
-        if (assetIdArg.size() == 0)
-            then {
-                let issue = Issue(name, description, 0, precision, true)
-                ([issue], calculateAssetId(issue))
-            } 
-            else ([], assetIdArg)
-    } else throw(errInvalidValues)
+            else (typeBase, 8)
+    } else {
+        let asset = assetInfo(assetId).valueOrErrorMessage(errAssetNotFound)
+        let type = if (asset.issuer == this) then typeWrapped else typeNative
+        (type, asset.decimals)
+    }
     
     let assetIdStr = toBase64String(assetId)
 
     let keySourceAddress = assetSourceAndAddress.toBase64String() + keyAssetAddress
     let keyNativeAddress = assetIdStr + keyAssetAddress
+
     if (getBinary(keySourceAddress).isDefined() || getBinary(keyNativeAddress).isDefined())
         then throw(errAlreadyExists)
-        else actions ++ [
-            BinaryEntry(keySourceAddress, assetId),
-            BinaryEntry(keyNativeAddress, assetSourceAndAddress),
-            IntegerEntry(assetIdStr + keyAssetType, type),
-            IntegerEntry(assetIdStr + keyAssetPrecision, precision),
-            IntegerEntry(assetIdStr + keyAssetMinFee, minFee),
-            BooleanEntry(assetIdStr + keyAssetIsActive, true)
-        ]
+        else 
+
+    [
+        BinaryEntry(keySourceAddress, assetId),
+        BinaryEntry(keyNativeAddress, assetSourceAndAddress),
+        IntegerEntry(assetIdStr + keyAssetType, type),
+        IntegerEntry(assetIdStr + keyAssetPrecision, precision),
+        IntegerEntry(assetIdStr + keyAssetMinFee, minFee),
+        BooleanEntry(assetIdStr + keyAssetIsActive, true)
+    ]
+}
+
+@Callable(i)
+func issue(name: String, description: String, precision: Int) = {
+    strict callerCheck = i.assertCallerIsManager(ASSET_MANAGER)
+    [Issue(name, description, 0, precision, true)]
 }
 
 @Callable(i)
@@ -190,7 +187,7 @@ func removeAsset(
             then [ScriptTransfer(Address(newAuthority), balance, assetId)]
             else []
     } else if (type == typeWrapped) then {
-        # Chenge asset issuer
+        # Chenge asset issuer (impossible)
         []
     } else throw(errInvalidValues)
     
