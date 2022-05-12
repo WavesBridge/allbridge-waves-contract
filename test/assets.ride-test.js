@@ -33,7 +33,7 @@ describe('Assets', async function () {
             bridge: toWavelet(10),
             admin: toWavelet(10),
             feeCollector: toWavelet(10),
-            unclokSigner: toWavelet(10),
+            unlockSigner: toWavelet(10),
             token: toWavelet(10),
             alice: toWavelet(10),
             validator: toWavelet(10),
@@ -44,7 +44,7 @@ describe('Assets', async function () {
         FEE_COLLECTOR = accountSeedToBase64(accounts.feeCollector);
         ALICE = accountSeedToBase64(accounts.alice);
         NEW_OWNER = accountSeedToBase64(accounts.newOwner);
-        UNLOCK_SIGNER = accountSeedToBase64(accounts.unclokSigner);
+        UNLOCK_SIGNER = accountSeedToBase64(accounts.unlockSigner);
 
         console.log(`Admin b64: ${ADMIN}`);
         console.log(`Alice b64: ${ALICE}`);
@@ -111,7 +111,9 @@ describe('Assets', async function () {
             source: BASE_ASSET_SOURCE_AND_ADDRESS,
             type: TYPE_BASE,
             precision: 8,
-            minFee: 1000000
+            minFee: 1000000,
+            isActive: true
+
         })
 
         // Adding the same token again
@@ -149,7 +151,8 @@ describe('Assets', async function () {
             source: NATIVE_ASSET_SOURCE_AND_ADDRESS,
             type: TYPE_NATIVE,
             precision: 8,
-            minFee: 1000000
+            minFee: 1000000,
+            isActive: true
         })
 
         // Adding the same token again
@@ -201,7 +204,8 @@ describe('Assets', async function () {
             source: WRAPPED_ASSET_SOURCE_AND_ADDRESS,
             type: TYPE_WRAPPED,
             precision: 6,
-            minFee: 1000000
+            minFee: 1000000,
+            isActive: true
         })
 
         // Adding the same token again
@@ -248,7 +252,8 @@ describe('Assets', async function () {
             source: null,
             type: null,
             precision: null,
-            minFee: null
+            minFee: null,
+            isActive: null
         })
       
         // Remove the same token again
@@ -294,7 +299,8 @@ describe('Assets', async function () {
             source: null,
             type: null,
             precision: null,
-            minFee: null
+            minFee: null,
+            isActive: null
         })
       
         // Remove the same token again
@@ -333,7 +339,8 @@ describe('Assets', async function () {
             source: null,
             type: null,
             precision: null,
-            minFee: null
+            minFee: null,
+            isActive: null
         })
 
         // Remove the same token again

@@ -1,4 +1,4 @@
-const { getSigneture } = require("./utils");
+const { getSignature } = require("./utils");
 
 const wvs = 10 ** 8;
 
@@ -23,6 +23,6 @@ describe('Bridge', async() => {
     })
 
     it('test', async function () {
-       getSigneture("")
+       getSignature("")
     })
 })

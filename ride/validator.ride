@@ -18,7 +18,6 @@ let errUninitialized = "uninitialized"
 let errInvalidSignature = "invalid signature"
 let errAlreadyClaimed = "claimed"
 let errAlreadyLocked = "locked"
-let errBridgeOnly = "not bridge"
 let errInvalidLockId = "invalid lockId"
 
 let chainWaves = "V0FWRQ==" # 0x57415645

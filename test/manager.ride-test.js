@@ -19,7 +19,7 @@ describe('Manager', async function () {
             bridge: toWavelet(10),
             admin: toWavelet(10),
             feeCollector: toWavelet(10),
-            unclokSigner: toWavelet(10),
+            unlockSigner: toWavelet(10),
             token: toWavelet(10),
             alice: toWavelet(10),
             validator: toWavelet(10),
@@ -30,7 +30,7 @@ describe('Manager', async function () {
         FEE_COLLECTOR = accountSeedToBase64(accounts.feeCollector);
         ALICE = accountSeedToBase64(accounts.alice);
         NEW_OWNER = accountSeedToBase64(accounts.newOwner);
-        UNLOCK_SIGNER = accountSeedToBase64(accounts.unclokSigner);
+        UNLOCK_SIGNER = accountSeedToBase64(accounts.unlockSigner);
 
         console.log(`Admin b64: ${ADMIN}`);
         console.log(`Alice b64: ${ALICE}`);

@@ -1,6 +1,6 @@
 const eth = require('ethereumjs-util');
 const crypto = require('crypto');
-const { initValidatorContract, invokeAndWait, getSigneture } = require('./utils');
+const { initValidatorContract, invokeAndWait, getSignature } = require('./utils');
 
 const wvs = 10 ** 8;
 
@@ -30,7 +30,7 @@ describe('Validator', async function () {
         const lockSource = "VFJBAA==";
         const tokenSourceAndAddress = "VFJBAA4VFgcKGxMBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-        const signature = getSigneture(lockId, recipient, amount, lockSource, tokenSourceAndAddress, ORACLE);
+        const signature = getSignature(lockId, recipient, amount, lockSource, tokenSourceAndAddress, ORACLE);
 
         expect(signature).equal('q9hpSAmo+cqGGkQKQVbzykYbl+OJbmuVMpn80MC6jXB9FKJJHFnCVBFysUEOrmYFzzmXunJ6N6oVM3qWoShK5xs=');
         await invokeAndWait({
