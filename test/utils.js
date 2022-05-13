@@ -65,7 +65,10 @@ async function initValidatorContract(oracle) {
     const initTx = await invoke({
         dApp: address(accounts.validator),
         functionName: 'init',
-        arguments: [[1], {type: 'binary', value: accountSeedToBase64(accounts.bridge)},
+        arguments: [
+            {type: 'binary', value: accountSeedToBase64(accounts.admin)},
+            [1],
+            {type: 'binary', value: accountSeedToBase64(accounts.bridge)},
             {type: 'binary', value: oraclePublicKey}]
     }, accounts.admin);
     await waitForTx(initTx.id);

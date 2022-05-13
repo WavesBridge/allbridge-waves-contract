@@ -1,49 +1,259 @@
-const eth = require('ethereumjs-util');
-const crypto = require('crypto');
-const { initValidatorContract, invokeAndWait, getSignature } = require('./utils');
-
-const wvs = 10 ** 8;
-
-const VERSION = Buffer.from([1]).toString("base64");
+const {
+    initValidatorContract, invokeAndWait, getSignature, hasUnlock, getLockData, accountSeedToBase64, base64Normalize,
+    toWavelet
+} = require('./utils');
 
 describe('Validator', async function () {
 
-    let ADMIN = "";
-    let BRIDGE = "";
+    let ADMIN = '';
+    let ALICE = '';
+    let BRIDGE = '';
     let ORACLE;
 
     before(async function () {
+
         await setupAccounts({
-            bridge: 0.05 * wvs,
-            validator: 0.05 * wvs,
-            admin: 0.05 * wvs,
-            alice: 0.05 * wvs,
-        });
+            bridge: toWavelet(0.05),
+            validator: toWavelet(0.05),
+            admin: toWavelet(0.05),
+            alice: toWavelet(0.05),
+        })
+
+        ADMIN = accountSeedToBase64(accounts.admin);
+        ALICE = accountSeedToBase64(accounts.alice);
+        BRIDGE = accountSeedToBase64(accounts.bridge);
         ORACLE = await initValidatorContract(Buffer.from('0312ed38d39c522cf6b00dd4e60e1e9f99939fe3944d7fe737abdb80399ae54f', 'hex'))
         console.log('Config set');
     });
 
-    it('create unlock', async function () {
-        const lockId = "AWJgMbimgkbqRMNx34IitA==";
-        const recipient = "AVTsmQLTLh3Rd4m9Uj/bKvRP3KYWstDrSKsAAAAAAAA=";
+    describe('createUnlock', () => {
+        const lockId = 'AWJgMbimgkbqRMNx34IitA==';
+        const recipient = 'AVTsmQLTLh3Rd4m9Uj/bKvRP3KYWstDrSKsAAAAAAAA=';
         const amount = 1990000000;
-        const lockSource = "VFJBAA==";
-        const tokenSourceAndAddress = "VFJBAA4VFgcKGxMBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+        const lockSource = 'VFJBAA==';
+        const tokenSourceAndAddress = 'VFJBAA4VFgcKGxMBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
-        const signature = getSignature(lockId, recipient, amount, lockSource, tokenSourceAndAddress, ORACLE);
+        it('fail: caller not bridge', async () => {
+            const signature = getSignature(lockId, recipient, amount, lockSource, tokenSourceAndAddress, ORACLE);
+            const result = invokeAndWait({
+                    dApp: address(accounts.validator),
+                    functionName: 'createUnlock',
+                    arguments: [
+                        {type: 'binary', value: lockId},
+                        {type: 'binary', value: recipient},
+                        {type: 'integer', value: amount},
+                        {type: 'binary', value: lockSource},
+                        {type: 'binary', value: tokenSourceAndAddress},
+                        {type: 'binary', value: signature},
+                    ]
+                },
+                accounts.alice);
+            await expect(result).rejectedWith('unauthorized');
+        })
 
-        expect(signature).equal('q9hpSAmo+cqGGkQKQVbzykYbl+OJbmuVMpn80MC6jXB9FKJJHFnCVBFysUEOrmYFzzmXunJ6N6oVM3qWoShK5xs=');
-        await invokeAndWait({
-            dApp: address(accounts.validator),
-            functionName: "createUnlock", 
-            arguments: [
-                {type:'binary', value: lockId},
-                {type:'binary', value: recipient},
-                {type:'integer', value: amount},
-                {type:'binary', value: lockSource},
-                {type:'binary', value: tokenSourceAndAddress},
-                {type:'binary', value: signature},
-            ]},
-        accounts.bridge);
+        it('fail: wrong oracle', async () => {
+            const signature = getSignature(lockId, recipient, amount, lockSource, tokenSourceAndAddress, wavesCrypto.randomBytes(32));
+            const result = invokeAndWait({
+                    dApp: address(accounts.validator),
+                    functionName: 'createUnlock',
+                    arguments: [
+                        {type: 'binary', value: lockId},
+                        {type: 'binary', value: recipient},
+                        {type: 'integer', value: amount},
+                        {type: 'binary', value: lockSource},
+                        {type: 'binary', value: tokenSourceAndAddress},
+                        {type: 'binary', value: signature},
+                    ]
+                },
+                accounts.bridge);
+            await expect(result).rejectedWith('invalid signature');
+        })
+
+        it('fail: invalid data', async () => {
+            const signature = getSignature(lockId, recipient, amount, lockSource, tokenSourceAndAddress, wavesCrypto.randomBytes(32));
+            const result = invokeAndWait({
+                    dApp: address(accounts.validator),
+                    functionName: 'createUnlock',
+                    arguments: [
+                        {type: 'binary', value: 'AWJgMbimgkbqRMNx34IitQ=='},
+                        {type: 'binary', value: recipient},
+                        {type: 'integer', value: amount},
+                        {type: 'binary', value: lockSource},
+                        {type: 'binary', value: tokenSourceAndAddress},
+                        {type: 'binary', value: signature},
+                    ]
+                },
+                accounts.bridge);
+            await expect(result).rejectedWith('invalid signature');
+        })
+
+        it('fail: invalid lockId', async () => {
+            const lockId = 'BWJgMbimgkbqRMNx34IitA==';
+            const signature = getSignature(lockId, recipient, amount, lockSource, tokenSourceAndAddress, wavesCrypto.randomBytes(32));
+            const result = invokeAndWait({
+                    dApp: address(accounts.validator),
+                    functionName: 'createUnlock',
+                    arguments: [
+                        {type: 'binary', value: lockId},
+                        {type: 'binary', value: recipient},
+                        {type: 'integer', value: amount},
+                        {type: 'binary', value: lockSource},
+                        {type: 'binary', value: tokenSourceAndAddress},
+                        {type: 'binary', value: signature},
+                    ]
+                },
+                accounts.bridge);
+            await expect(result).rejectedWith('invalid lockId');
+        })
+
+        it('success', async function () {
+            const signature = getSignature(lockId, recipient, amount, lockSource, tokenSourceAndAddress, ORACLE);
+
+            expect(signature).equal('q9hpSAmo+cqGGkQKQVbzykYbl+OJbmuVMpn80MC6jXB9FKJJHFnCVBFysUEOrmYFzzmXunJ6N6oVM3qWoShK5xs=');
+            const params = {
+                dApp: address(accounts.validator),
+                functionName: 'createUnlock',
+                arguments: [
+                    {type: 'binary', value: lockId},
+                    {type: 'binary', value: recipient},
+                    {type: 'integer', value: amount},
+                    {type: 'binary', value: lockSource},
+                    {type: 'binary', value: tokenSourceAndAddress},
+                    {type: 'binary', value: signature},
+                ]
+            };
+            await invokeAndWait(params, accounts.bridge);
+
+            expect(await hasUnlock(lockSource, lockId)).equal(true)
+
+            await expect(invokeAndWait(params, accounts.bridge)).rejectedWith('claimed')
+        })
+    })
+
+    describe('createLock', () => {
+        const lockId = 'AWJgMbimgkbqRMNx34IitA==';
+        const recipient = 'AVTsmQLTLh3Rd4m9Uj/bKvRP3KYWstDrSKsAAAAAAAA=';
+        const amount = 1990000000;
+        const lockDestination = 'VFJBAA==';
+        const tokenSourceAndAddress = 'VFJBAA4VFgcKGxMBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+
+        it('fail: invalid lockId', async () => {
+            const params = {
+                dApp: address(accounts.validator),
+                functionName: 'createLock',
+                arguments: [
+                    {type: 'binary', value: 'BWJgMbimgkbqRMNx34IitA=='},
+                    {type: 'binary', value: recipient},
+                    {type: 'integer', value: amount},
+                    {type: 'binary', value: lockDestination},
+                    {type: 'binary', value: tokenSourceAndAddress},
+                ]
+            };
+            await expect(invokeAndWait(params, accounts.bridge)).rejectedWith('invalid lockId');
+        })
+
+        it('fail: invalid caller', async () => {
+            const params = {
+                dApp: address(accounts.validator),
+                functionName: 'createLock',
+                arguments: [
+                    {type: 'binary', value: lockId},
+                    {type: 'binary', value: recipient},
+                    {type: 'integer', value: amount},
+                    {type: 'binary', value: lockDestination},
+                    {type: 'binary', value: tokenSourceAndAddress},
+                ]
+            };
+            await expect(invokeAndWait(params, accounts.alice)).rejectedWith('unauthorized');
+        })
+
+        it('success', async () => {
+            const params = {
+                dApp: address(accounts.validator),
+                functionName: 'createLock',
+                arguments: [
+                    {type: 'binary', value: lockId},
+                    {type: 'binary', value: recipient},
+                    {type: 'integer', value: amount},
+                    {type: 'binary', value: lockDestination},
+                    {type: 'binary', value: tokenSourceAndAddress},
+                ]
+            };
+            await invokeAndWait(params, accounts.bridge);
+
+            const lockInfo = await getLockData(lockId);
+
+            expect(lockInfo).deep.equal({
+                recipient,
+                amount,
+                destination: lockDestination,
+                assetSource: tokenSourceAndAddress
+            })
+
+            await expect(invokeAndWait(params, accounts.bridge)).rejectedWith('locked')
+        })
+    })
+    describe('admin', () => {
+        it('success', async () => {
+            await invokeAndWait({
+                dApp: address(accounts.validator),
+                functionName: 'setAdmin',
+                arguments: [{type: 'binary', value: ALICE}]
+            }, accounts.admin);
+
+            {
+                const tx = invokeAndWait({
+                    dApp: address(accounts.validator),
+                    functionName: 'setOracle',
+                    arguments: [{type: 'binary', value: ALICE}]
+                }, accounts.admin);
+                await expect(tx).rejectedWith('unauthorized');
+            }
+
+            {
+                const tx = invokeAndWait({
+                    dApp: address(accounts.validator),
+                    functionName: 'setBridge',
+                    arguments: [{type: 'binary', value: ALICE}]
+                }, accounts.admin);
+                await expect(tx).rejectedWith('unauthorized');
+            }
+
+            {
+                const tx = invokeAndWait({
+                    dApp: address(accounts.validator),
+                    functionName: 'setAdmin',
+                    arguments: [{type: 'binary', value: ADMIN}]
+                }, accounts.admin);
+                await expect(tx).rejectedWith('unauthorized');
+            }
+
+            await invokeAndWait({
+                dApp: address(accounts.validator),
+                functionName: 'setAdmin',
+                arguments: [{type: 'binary', value: ADMIN}]
+            }, accounts.alice);
+
+            {
+                await invokeAndWait({
+                    dApp: address(accounts.validator),
+                    functionName: 'setOracle',
+                    arguments: [{type: 'binary', value: ALICE}]
+                }, accounts.admin);
+                const data = await accountDataByKey(`_o`, address(accounts.validator));
+                expect(base64Normalize(data.value)).equal(ALICE)
+            }
+
+            {
+                await invokeAndWait({
+                    dApp: address(accounts.validator),
+                    functionName: 'setBridge',
+                    arguments: [{type: 'binary', value: ALICE}]
+                }, accounts.admin);
+                const data = await accountDataByKey(`_b`, address(accounts.validator));
+                expect(base64Normalize(data.value)).equal(ALICE)
+            }
+
+        })
     })
 });

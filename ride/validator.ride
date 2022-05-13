@@ -51,13 +51,14 @@ func assertLockNotExists(lockRecipientKey: String) = {
 }
 
 @Callable(i)
-func init(version: ByteVector, bridge: ByteVector, oracle: ByteVector) = {
+func init(admin: ByteVector, version: ByteVector, bridge: ByteVector, oracle: ByteVector) = {
     if (getBinary(keyAdmin).isDefined())  # Can be called only once
         then throw(errUnauthorized) 
         else [
             BinaryEntry(keyVersion, version),
             BinaryEntry(keyBridge, bridge),
-            BinaryEntry(keyOracle, oracle)
+            BinaryEntry(keyOracle, oracle),
+            BinaryEntry(keyAdmin, admin)
         ]
 }
 
@@ -110,7 +111,7 @@ func createLock(
     recipient: ByteVector,
     amount: Int,
     lockDestination: ByteVector,
-    tokenSourceAndAddress: ByteVector
+    assetSourceAndAddress: ByteVector
 ) = {
     let lockIdStr = lockId.toBase64String()
     let lockRecipientKey = lockIdStr + keyLockRecipient
@@ -122,7 +123,7 @@ func createLock(
         BinaryEntry(lockIdStr + keyLockRecipient, recipient),
         IntegerEntry(lockIdStr + keyLockAmount, amount),
         BinaryEntry(lockIdStr + keyLockDestination, lockDestination),
-        BinaryEntry(lockIdStr + keyLockAssetSource, tokenSourceAndAddress)
+        BinaryEntry(lockIdStr + keyLockAssetSource, assetSourceAndAddress)
     ]
 }
 

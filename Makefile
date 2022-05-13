@@ -10,7 +10,7 @@ test-validator:
 	surfboard test validator.ride-test.js
 test-manager:
 	surfboard test manager.ride-test.js
-test:
+test-all:
 	surfboard test
 deploy:
 	surfboard run ./scripts/bridge.deploy.js --env=testnet
