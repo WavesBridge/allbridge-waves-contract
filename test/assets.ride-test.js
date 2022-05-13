@@ -1,5 +1,5 @@
 const {toWavelet, base58ToBase64, initBridgeContract, getTokenInfo, getAssetId,
-    initNativeToken, addAsset, issueAsset, removeToken, setMinFee, setAssetState
+    initNativeToken, addAsset, issueAsset, removeAsset, setMinFee, setAssetState
 } = require('./utils');
 
 const NATIVE_ASSET_SOURCE = Buffer.from("POL\0")
@@ -119,7 +119,7 @@ describe('Assets', async function () {
     });
 
     it('fail: remove invalid signer', async () => {
-        const result = removeToken(BASE_ASSET_SOURCE_AND_ADDRESS, undefined, accounts.alice);
+        const result = removeAsset(BASE_ASSET_SOURCE_AND_ADDRESS, undefined, accounts.alice);
         await expect(result).rejectedWith("unauthorized");
     })
 
@@ -145,7 +145,7 @@ describe('Assets', async function () {
         const nweOwnerBalanceBefore = await balance(address(accounts.newOwner));
 
         // Successfully added
-        await removeToken(BASE_ASSET_SOURCE_AND_ADDRESS);
+        await removeAsset(BASE_ASSET_SOURCE_AND_ADDRESS);
 
         const bridgeBalanceAfter = await balance(address(accounts.bridge));
         const nweOwnerBalanceAfter = await balance(address(accounts.newOwner));
@@ -166,14 +166,14 @@ describe('Assets', async function () {
         })
       
         // Remove the same token again
-        await expect(removeToken(BASE_ASSET_SOURCE_AND_ADDRESS)).rejectedWith("not exists");
+        await expect(removeAsset(BASE_ASSET_SOURCE_AND_ADDRESS)).rejectedWith("not exists");
     })
 
     it('remove (native)', async () => {
         const bridgeBalanceBefore = await assetBalance(NATIVE_ASSET_ID_B58, address(accounts.bridge)) || 0;
         const newOwnerBalanceBefore = await assetBalance(NATIVE_ASSET_ID_B58, address(accounts.newOwner)) || 0;
 
-        await removeToken(NATIVE_ASSET_SOURCE_AND_ADDRESS);
+        await removeAsset(NATIVE_ASSET_SOURCE_AND_ADDRESS);
 
         const bridgeBalanceAfter = await assetBalance(NATIVE_ASSET_ID_B58, address(accounts.bridge)) || 0;
         const newOwnerBalanceAfter = await assetBalance(NATIVE_ASSET_ID_B58, address(accounts.newOwner)) || 0;
@@ -194,13 +194,13 @@ describe('Assets', async function () {
         })
       
         // Remove the same token again
-        await expect(removeToken(NATIVE_ASSET_SOURCE_AND_ADDRESS)).rejectedWith("not exists");
+        await expect(removeAsset(NATIVE_ASSET_SOURCE_AND_ADDRESS)).rejectedWith("not exists");
     })
 
     it('remove (wrapped)', async () => {
         const assetId = await getAssetId(WRAPPED_ASSET_SOURCE_AND_ADDRESS);
 
-        await removeToken(WRAPPED_ASSET_SOURCE_AND_ADDRESS);
+        await removeAsset(WRAPPED_ASSET_SOURCE_AND_ADDRESS);
 
         const assetIdAfter = await getAssetId(WRAPPED_ASSET_SOURCE_AND_ADDRESS);
         expect(assetIdAfter).equal(null);
@@ -215,6 +215,6 @@ describe('Assets', async function () {
         })
 
         // Remove the same token again
-        await expect(removeToken(WRAPPED_ASSET_SOURCE_AND_ADDRESS)).rejectedWith("not exists");
+        await expect(removeAsset(WRAPPED_ASSET_SOURCE_AND_ADDRESS)).rejectedWith("not exists");
     })
 })

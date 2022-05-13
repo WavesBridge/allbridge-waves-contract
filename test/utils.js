@@ -121,7 +121,8 @@ async function getTokenInfo(assetIdStr) {
     }
 }
 
-async function setManager(managerType, seed) {
+async function setManager(managerType, seed, sender) {
+    sender = sender || accounts.admin;
     return invokeAndWait({
         dApp: address(accounts.bridge),
         functionName: 'setManager',
@@ -129,7 +130,7 @@ async function setManager(managerType, seed) {
             {type: 'string', value: managerType},
             {type: 'binary', value: accountSeedToBase64(seed)}
         ]
-    }, accounts.admin)
+    }, sender)
 }
 
 async function getAssetId(source) {
@@ -248,7 +249,7 @@ async function issueAsset(precision = 8) {
     return tx.stateChanges.issues[0].assetId;
 }
 
-async function removeToken(source, newOwner, sender) {
+async function removeAsset(source, newOwner, sender) {
     sender = sender || accounts.admin;
     newOwner = newOwner || base58ToBase64(address(accounts.newOwner));
 
@@ -270,6 +271,57 @@ async function setMinFee(assetId, minFee, sender) {
         arguments: [
             {type:'binary', value: assetId},
             {type:'integer', value: minFee},
+        ]
+    }, sender)
+}
+
+async function setFeeCollector(feeCollectorSeed, sender) {
+    sender = sender || accounts.admin;
+    return invokeAndWait({
+        dApp: address(accounts.bridge),
+        functionName: "setFeeCollector",
+        arguments: [
+            {type:'binary', value: accountSeedToBase64(feeCollectorSeed)},
+        ]
+    }, sender)
+}
+
+async function setValidator(validatorSeed, sender) {
+    sender = sender || accounts.admin;
+    return invokeAndWait({
+        dApp: address(accounts.bridge),
+        functionName: "setValidator",
+        arguments: [
+            {type:'binary', value: accountSeedToBase64(validatorSeed)},
+        ]
+    }, sender)
+}
+
+async function startBridge(sender) {
+    sender = sender || accounts.admin;
+    return invokeAndWait({
+        dApp: address(accounts.bridge),
+        functionName: "startBridge",
+        arguments: []
+    }, sender)
+}
+
+async function stopBridge(sender) {
+    sender = sender || accounts.admin;
+    return invokeAndWait({
+        dApp: address(accounts.bridge),
+        functionName: "stopBridge",
+        arguments: []
+    }, sender)
+}
+
+async function setBaseFeeRate(baseFeeRateBP, sender) {
+    sender = sender || accounts.admin;
+    return invokeAndWait({
+        dApp: address(accounts.bridge),
+        functionName: "setBaseFeeRate",
+        arguments: [
+            {type:'integer', value: baseFeeRateBP},
         ]
     }, sender)
 }
@@ -307,6 +359,11 @@ module.exports = {
     addAsset,
     issueAsset,
     hasUnlock,
-    removeToken,
-    setMinFee
+    removeAsset,
+    setMinFee,
+    setValidator,
+    startBridge,
+    stopBridge,
+    setFeeCollector,
+    setBaseFeeRate
 }

@@ -339,20 +339,20 @@ func stopBridge() = {
 
 @Callable(i)
 func setMinFee(assetId: ByteVector, minFee: Int) = {
-    strict callerCheck = i.assertCallerIsManager(BRIDGE_MANAGER)
+    strict callerCheck = i.assertCallerIsManager(ASSET_MANAGER)
     let assetIdStr = assetId.toBase64String()
     [IntegerEntry(assetIdStr + keyAssetMinFee, minFee)]
 }
 
 @Callable(i)
 func setBaseFeeRate(baseFeeRateBP: Int) = {
-    strict callerCheck = i.assertCallerIsManager(BRIDGE_MANAGER)
+    strict callerCheck = i.assertCallerIsManager(ASSET_MANAGER)
     [IntegerEntry(keyBaseFeeRateBP, baseFeeRateBP)]
 }
 
 @Callable(i)
 func setAssetState(assetId: ByteVector, state: Boolean) = {
-    strict callerCheck = i.assertCallerIsManager(BRIDGE_MANAGER)
+    strict callerCheck = i.assertCallerIsManager(ASSET_MANAGER)
     let assetIdStr = assetId.toBase64String()
     [BooleanEntry(assetIdStr + keyAssetIsActive, state)]
 }

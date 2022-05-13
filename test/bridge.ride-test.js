@@ -1,6 +1,6 @@
 const {toWavelet, base58ToBase64, initValidatorContract,
     initBridgeContract, getLockData, generateLockId, lock,
-    setAssetState, initNativeToken, mintToken, addAsset, issueAsset, unlock, hasUnlock
+    setAssetState, initNativeToken, mintToken, addAsset, issueAsset, unlock, hasUnlock, stopBridge, startBridge
 } = require('./utils');
 
 
@@ -75,11 +75,18 @@ describe('Assets', async function () {
             await expect(result).to.be.rejectedWith("not enough balance");
         })
 
-        it ('fail: disabled', async () => {
+        it ('fail: asset disabled', async () => {
             await setAssetState(BASE_ASSET_ID, false);
             const result = lock(recipient, destination, amount)
             await expect(result).to.be.rejectedWith("asset is disabled");
             await setAssetState(BASE_ASSET_ID, true);
+        })
+
+        it ('fail: bridge stopped', async () => {
+            await stopBridge();
+            const result = lock(recipient, destination, amount)
+            await expect(result).to.be.rejectedWith("birdge is disabled");
+            await startBridge();
         })
 
         it ('fail: wrong destination', async () => {
@@ -191,7 +198,7 @@ describe('Assets', async function () {
         })
     })
 
-    describe.only('unlock', () => {
+    describe('unlock', () => {
         const amount = 10000;
         const lockSource = Buffer.from("TRA\0").toString("base64");
 
@@ -209,10 +216,16 @@ describe('Assets', async function () {
         })
 
         it('fail: invalid signature', async () => {
-            const tokenSourceAndAddress = BASE_ASSET_SOURCE_AND_ADDRESS;
             const invalidOracle = wavesCrypto.randomBytes(32);
-            const result = unlock(amount, lockSource, tokenSourceAndAddress, invalidOracle);
+            const result = unlock(amount, lockSource, BASE_ASSET_SOURCE_AND_ADDRESS, invalidOracle);
             await expect(result).to.be.rejectedWith("invalid signature");
+        })
+
+        it ('fail: bridge stopped', async () => {
+            await stopBridge();
+            const result = unlock(amount, lockSource, BASE_ASSET_SOURCE_AND_ADDRESS, ORACLE);
+            await expect(result).to.be.rejectedWith("birdge is disabled");
+            await startBridge();
         })
 
         it('base', async function () {
