@@ -1,4 +1,4 @@
-const {accountSeedToBase64, toWavelet, base58ToBase64, initBridgeContract, getTokenInfo, getAssetId,
+const {toWavelet, base58ToBase64, initBridgeContract, getTokenInfo, getAssetId,
     initNativeToken, addAsset, issueAsset, removeToken, setMinFee, setAssetState
 } = require('./utils');
 
@@ -23,12 +23,7 @@ describe('Assets', async function () {
 
     let NATIVE_ASSET_ID = "";
     let NATIVE_ASSET_ID_B58 = "";
-    let ADMIN = "";
-    let FEE_COLLECTOR = "";
-    let VALIDATOR = "";
-    let ALICE = "";
-    let NEW_OWNER = "";
-    let UNLOCK_SIGNER = "";
+
     const FEE = toWavelet(0.01);
 
     before(async function () {
@@ -42,12 +37,6 @@ describe('Assets', async function () {
             validator: toWavelet(10),
             newOwner: toWavelet(10),
         });
-        ADMIN = accountSeedToBase64(accounts.admin);
-        VALIDATOR = accountSeedToBase64(accounts.validator);
-        FEE_COLLECTOR = accountSeedToBase64(accounts.feeCollector);
-        ALICE = accountSeedToBase64(accounts.alice);
-        NEW_OWNER = accountSeedToBase64(accounts.newOwner);
-        UNLOCK_SIGNER = accountSeedToBase64(accounts.unlockSigner);
 
         await initBridgeContract();
 

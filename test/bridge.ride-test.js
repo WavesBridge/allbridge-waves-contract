@@ -1,4 +1,4 @@
-const {accountSeedToBase64, toWavelet, base58ToBase64, initValidatorContract,
+const {toWavelet, base58ToBase64, initValidatorContract,
     initBridgeContract, getLockData, generateLockId, lock,
     setAssetState, initNativeToken, mintToken, addAsset, issueAsset, unlock, hasUnlock
 } = require('./utils');
@@ -23,13 +23,6 @@ describe('Assets', async function () {
     let NATIVE_ASSET_ID_B58 = "";
     let WRAPPED_ASSET_ID = "";
     let WRAPPED_ASSET_ID_B58 = "";
-    let ADMIN = "";
-    let ALICE = "";
-    let NEW_OWNER = "";
-    let VALIDATOR = "";
-    let BRIDGE = "";
-    let FEE_COLLECTOR = "";
-    let UNLOCK_SIGNER = "";
     let ORACLE;
     const FEE = 1000000;
 
@@ -41,17 +34,11 @@ describe('Assets', async function () {
             unlockSigner: toWavelet(10),
             admin: toWavelet(10),
             token: toWavelet(10),
-            alice: toWavelet(10),
+            alice: toWavelet(100000),
             newOwner: toWavelet(10),
         });
 
-        ADMIN = accountSeedToBase64(accounts.admin);
-        ALICE = accountSeedToBase64(accounts.alice);
-        VALIDATOR = accountSeedToBase64(accounts.validator)
-        NEW_OWNER = accountSeedToBase64(accounts.newOwner);
-        BRIDGE = accountSeedToBase64(accounts.bridge);
-        FEE_COLLECTOR = accountSeedToBase64(accounts.feeCollector);
-        UNLOCK_SIGNER = accountSeedToBase64(accounts.unlockSigner);
+
         ORACLE = await initValidatorContract();
         await initBridgeContract();
 
@@ -114,8 +101,10 @@ describe('Assets', async function () {
             await expect(result).to.be.rejectedWith("not one payment");
         })
 
-        it('base', async function () {
+        it('base (fee as share)', async function () {
             const lockId = generateLockId();
+            const amount = toWavelet(1000);
+            const fee = amount * 30 / 10000;
 
             const bridgeBalanceBefore = await balance(address(accounts.bridge));
             const userBalanceBefore = await balance(address(accounts.alice));
@@ -127,15 +116,15 @@ describe('Assets', async function () {
             const userBalanceAfter = await balance(address(accounts.alice));
             const feeCollectorBalanceAfter = await balance(address(accounts.feeCollector));
 
-            expect(bridgeBalanceAfter).equal(bridgeBalanceBefore + amount - FEE);
+            expect(bridgeBalanceAfter).equal(bridgeBalanceBefore + amount - fee);
             expect(userBalanceAfter).equal(userBalanceBefore - amount - lockTx.fee);
-            expect(feeCollectorBalanceAfter).equal(feeCollectorBalanceBefore + FEE);
+            expect(feeCollectorBalanceAfter).equal(feeCollectorBalanceBefore + fee);
 
             const lockData = await getLockData(lockId);
 
             expect(lockData).deep.equal({
                 recipient: recipient,
-                amount: (amount - FEE) * 10, // token precision 8, system precision 9
+                amount: (amount - fee) * 10, // token precision 8, system precision 9
                 destination: destination,
                 assetSource: BASE_ASSET_SOURCE_AND_ADDRESS
             })
@@ -232,16 +221,45 @@ describe('Assets', async function () {
 
             const bridgeBalanceBefore = await balance(address(accounts.bridge));
             const userBalanceBefore = await balance(address(accounts.alice));
+            const feeCollectorBalanceBefore = await balance(address(accounts.feeCollector)) || 0;
 
             const unlockTx = await unlock(amount, lockSource, tokenSourceAndAddress, ORACLE, lockId);
 
             const bridgeBalanceAfter = await balance(address(accounts.bridge));
             const userBalanceAfter = await balance(address(accounts.alice));
+            const feeCollectorBalanceAfter = await balance(address(accounts.feeCollector)) || 0;
 
             const tokenPrecisionAmount = amount / 10;
 
             expect(bridgeBalanceAfter).equal(bridgeBalanceBefore - tokenPrecisionAmount);
             expect(userBalanceAfter).equal(userBalanceBefore + tokenPrecisionAmount - unlockTx.fee);
+            expect(feeCollectorBalanceAfter).equal(feeCollectorBalanceBefore);
+
+            expect(await hasUnlock(lockSource, lockId)).equal(true)
+
+            await expect(unlock(amount, lockSource, tokenSourceAndAddress, ORACLE, lockId)).to.be.rejectedWith("claimed");
+        })
+
+        it('base (by unlock signer)', async function () {
+            const lockId = generateLockId();
+            const tokenSourceAndAddress = BASE_ASSET_SOURCE_AND_ADDRESS;
+            const amount = toWavelet(1);
+
+            const bridgeBalanceBefore = await balance(address(accounts.bridge));
+            const userBalanceBefore = await balance(address(accounts.alice));
+            const feeCollectorBalanceBefore = await balance(address(accounts.feeCollector));
+
+            await unlock(amount, lockSource, tokenSourceAndAddress, ORACLE, lockId, undefined, undefined, accounts.unlockSigner);
+
+            const bridgeBalanceAfter = await balance(address(accounts.bridge));
+            const userBalanceAfter = await balance(address(accounts.alice));
+            const feeCollectorBalanceAfter = await balance(address(accounts.feeCollector));
+
+            const tokenPrecisionAmount = amount / 10;
+
+            expect(bridgeBalanceAfter).equal(bridgeBalanceBefore - tokenPrecisionAmount);
+            expect(userBalanceAfter).equal(userBalanceBefore + tokenPrecisionAmount - FEE);
+            expect(feeCollectorBalanceAfter).equal(feeCollectorBalanceBefore + FEE);
 
             expect(await hasUnlock(lockSource, lockId)).equal(true)
 
@@ -255,16 +273,46 @@ describe('Assets', async function () {
 
             const bridgeBalanceBefore = await assetBalance(assetId, address(accounts.bridge)) || 0;
             const userBalanceBefore = await assetBalance(assetId, address(accounts.alice)) || 0;
+            const feeCollectorBalanceBefore = await assetBalance(assetId, address(accounts.feeCollector)) || 0;
 
             await unlock(amount, lockSource, tokenSourceAndAddress, ORACLE, lockId);
 
             const bridgeBalanceAfter = await assetBalance(assetId, address(accounts.bridge)) || 0;
             const userBalanceAfter = await assetBalance(assetId, address(accounts.alice)) || 0;
+            const feeCollectorBalanceAfter = await assetBalance(assetId, address(accounts.feeCollector)) || 0;
 
             const tokenPrecisionAmount = amount / 10;
 
             expect(bridgeBalanceAfter).equal(bridgeBalanceBefore - tokenPrecisionAmount);
             expect(userBalanceAfter).equal(userBalanceBefore + tokenPrecisionAmount);
+            expect(feeCollectorBalanceAfter).equal(feeCollectorBalanceBefore);
+
+            expect(await hasUnlock(lockSource, lockId)).equal(true)
+
+            await expect(unlock(amount, lockSource, tokenSourceAndAddress, ORACLE, lockId)).to.be.rejectedWith("claimed");
+        })
+
+        it('native (by unlock signer)', async function () {
+            const lockId = generateLockId();
+            const tokenSourceAndAddress = NATIVE_ASSET_SOURCE_AND_ADDRESS;
+            const assetId = NATIVE_ASSET_ID_B58;
+            const amount = toWavelet(1);
+
+            const bridgeBalanceBefore = await assetBalance(assetId, address(accounts.bridge)) || 0;
+            const userBalanceBefore = await assetBalance(assetId, address(accounts.alice)) || 0;
+            const feeCollectorBalanceBefore = await assetBalance(assetId, address(accounts.feeCollector)) || 0;
+
+            await unlock(amount, lockSource, tokenSourceAndAddress, ORACLE, lockId, undefined, undefined, accounts.unlockSigner);
+
+            const bridgeBalanceAfter = await assetBalance(assetId, address(accounts.bridge)) || 0;
+            const userBalanceAfter = await assetBalance(assetId, address(accounts.alice)) || 0;
+            const feeCollectorBalanceAfter = await assetBalance(assetId, address(accounts.feeCollector)) || 0;
+
+            const tokenPrecisionAmount = amount / 10;
+
+            expect(bridgeBalanceAfter).equal(bridgeBalanceBefore - tokenPrecisionAmount);
+            expect(userBalanceAfter).equal(userBalanceBefore + tokenPrecisionAmount - FEE);
+            expect(feeCollectorBalanceAfter).equal(feeCollectorBalanceBefore + FEE);
 
             expect(await hasUnlock(lockSource, lockId)).equal(true)
 
@@ -277,16 +325,45 @@ describe('Assets', async function () {
             const assetId = WRAPPED_ASSET_ID_B58;
 
             const userBalanceBefore = await assetBalance(assetId, address(accounts.alice)) || 0;
+            const feeCollectorBalanceBefore = await assetBalance(assetId, address(accounts.feeCollector)) || 0;
 
             await unlock(amount, lockSource, tokenSourceAndAddress, ORACLE, lockId);
 
             const bridgeBalanceAfter = await assetBalance(assetId, address(accounts.bridge)) || 0;
             const userBalanceAfter = await assetBalance(assetId, address(accounts.alice)) || 0;
+            const feeCollectorBalanceAfter = await assetBalance(assetId, address(accounts.feeCollector)) || 0;
 
             const tokenPrecisionAmount = amount / 10;
 
             expect(bridgeBalanceAfter).equal(0);
             expect(userBalanceAfter).equal(userBalanceBefore + tokenPrecisionAmount);
+            expect(feeCollectorBalanceAfter).equal(feeCollectorBalanceBefore);
+
+            expect(await hasUnlock(lockSource, lockId)).equal(true)
+
+            await expect(unlock(amount, lockSource, tokenSourceAndAddress, ORACLE, lockId)).to.be.rejectedWith("claimed");
+        })
+
+        it('wrapped (by unlock signer)', async function () {
+            const lockId = generateLockId();
+            const tokenSourceAndAddress = WRAPPED_ASSET_SOURCE_AND_ADDRESS;
+            const assetId = WRAPPED_ASSET_ID_B58;
+            const amount = toWavelet(1);
+
+            const userBalanceBefore = await assetBalance(assetId, address(accounts.alice)) || 0;
+            const feeCollectorBalanceBefore = await assetBalance(assetId, address(accounts.feeCollector)) || 0;
+
+            await unlock(amount, lockSource, tokenSourceAndAddress, ORACLE, lockId, undefined, undefined, accounts.unlockSigner);
+
+            const bridgeBalanceAfter = await assetBalance(assetId, address(accounts.bridge)) || 0;
+            const userBalanceAfter = await assetBalance(assetId, address(accounts.alice)) || 0;
+            const feeCollectorBalanceAfter = await assetBalance(assetId, address(accounts.feeCollector)) || 0;
+
+            const tokenPrecisionAmount = amount / 10;
+
+            expect(bridgeBalanceAfter).equal(0);
+            expect(userBalanceAfter).equal(userBalanceBefore + tokenPrecisionAmount - FEE);
+            expect(feeCollectorBalanceAfter).equal(feeCollectorBalanceBefore + FEE);
 
             expect(await hasUnlock(lockSource, lockId)).equal(true)
 
