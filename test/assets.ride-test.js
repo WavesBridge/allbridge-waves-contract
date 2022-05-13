@@ -1,4 +1,6 @@
-const {accountSeedToBase64, toWavelet, broadcastAndWait, base58ToBase64, initBridgeContract, getTokenInfo, getAssetId, invokeAndWait} = require('./utils');
+const {accountSeedToBase64, toWavelet, base58ToBase64, initBridgeContract, getTokenInfo, getAssetId,
+    initNativeToken, addAsset, issueAsset, removeToken, setMinFee, setAssetState
+} = require('./utils');
 
 const NATIVE_ASSET_SOURCE = Buffer.from("POL\0")
 const NATIVE_ASSET_ADDRESS = Buffer.from("1122334455667788990011223344556677889900", "hex")
@@ -27,6 +29,7 @@ describe('Assets', async function () {
     let ALICE = "";
     let NEW_OWNER = "";
     let UNLOCK_SIGNER = "";
+    const FEE = toWavelet(0.01);
 
     before(async function () {
         await setupAccounts({
@@ -46,62 +49,27 @@ describe('Assets', async function () {
         NEW_OWNER = accountSeedToBase64(accounts.newOwner);
         UNLOCK_SIGNER = accountSeedToBase64(accounts.unlockSigner);
 
-        console.log(`Admin b64: ${ADMIN}`);
-        console.log(`Alice b64: ${ALICE}`);
-
         await initBridgeContract();
 
-        const issueTx = issue({
-            description: "Test token", 
-            name: "Test", 
-            quantity: toWavelet(10), 
-            reissuable: true, 
-            decimals: 8
-        }, accounts.token);
-
-        NATIVE_ASSET_ID_B58 = (await broadcastAndWait(issueTx)).assetId;
-        console.log(`Token b58: ${NATIVE_ASSET_ID_B58}`);
+        NATIVE_ASSET_ID_B58 = await initNativeToken();
         NATIVE_ASSET_ID = base58ToBase64(NATIVE_ASSET_ID_B58)
-        await broadcastAndWait(transfer({
-            amount: toWavelet(5),
-            recipient: address(accounts.bridge),
-            assetId: NATIVE_ASSET_ID_B58
-        }, accounts.token));
-
-        console.log('Admin set');
     });
+
+    it ('fail: add asset unauthorized', async () => {
+        const result = addAsset(BASE_ASSET_ID, BASE_ASSET_SOURCE_AND_ADDRESS, FEE, accounts.alice);
+        await expect(result).rejectedWith("unauthorized");
+    })
+
+    it ('fail: add asset wrong source for base asset', async () => {
+        const result = addAsset(BASE_ASSET_ID, NATIVE_ASSET_SOURCE_AND_ADDRESS, FEE);
+        await expect(result).rejectedWith("invalid values");
+    })
 
 
     it('add asset (base)', async function () {
 
-        const params = {
-            dApp: address(accounts.bridge),
-            call: {
-                function: 'addAsset',
-                args: [
-                    {type:'binary', value: BASE_ASSET_SOURCE_AND_ADDRESS},
-                    {type:'binary', value: BASE_ASSET_ID},
-                    {type:'integer', value: 1000000},
-                ]
-            },
-        };
-
-        // Wrong signer
-        const txFail1 = invokeScript(params, accounts.alice);
-        await expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
-
-        let paramsFail = JSON.parse(JSON.stringify(params));
-
-        // Wrong source/address
-        paramsFail = JSON.parse(JSON.stringify(params));
-        paramsFail.call.args[0].value = NATIVE_ASSET_SOURCE_AND_ADDRESS;  
-        const txFailSourceAndAddress = invokeScript(paramsFail, accounts.admin);
-        await expect(broadcast(txFailSourceAndAddress)).to.be.rejectedWith("invalid values");
-
         // Successfully added
-        const tx = invokeScript(params, accounts.admin);
-
-        await broadcastAndWait(tx);
+        await addAsset(BASE_ASSET_ID, BASE_ASSET_SOURCE_AND_ADDRESS, FEE);
 
         const assetId = await getAssetId(BASE_ASSET_SOURCE_AND_ADDRESS);
         expect(assetId).equal(BASE_ASSET_ID);
@@ -111,37 +79,17 @@ describe('Assets', async function () {
             source: BASE_ASSET_SOURCE_AND_ADDRESS,
             type: TYPE_BASE,
             precision: 8,
-            minFee: 1000000,
+            minFee: FEE,
             isActive: true
 
         })
 
         // Adding the same token again
-        const txFail2 = invokeScript(params, accounts.admin);
-        await expect(broadcast(txFail2)).to.be.rejectedWith("exists");
+        await expect(addAsset(BASE_ASSET_ID, BASE_ASSET_SOURCE_AND_ADDRESS, FEE)).rejectedWith("exists");
     })
 
     it('add asset (native)', async function () {
-        const params = {
-            dApp: address(accounts.bridge),
-            call: {
-                function: "addAsset",
-                args: [
-                    {type:'binary', value: NATIVE_ASSET_SOURCE_AND_ADDRESS},
-                    {type:'binary', value: NATIVE_ASSET_ID},
-                    {type:'integer', value: 1000000},
-                ]
-            },
-        };
-
-        // Wrong signer
-        const txFail1 = invokeScript(params, accounts.alice);
-        await expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
-
-        // Successfully added
-        const tx = invokeScript(params, accounts.admin);
-
-        await broadcastAndWait(tx);
+        await addAsset(NATIVE_ASSET_ID, NATIVE_ASSET_SOURCE_AND_ADDRESS, FEE);
 
         const assetId = await getAssetId(NATIVE_ASSET_SOURCE_AND_ADDRESS);
         expect(assetId).equal(NATIVE_ASSET_ID);
@@ -151,52 +99,21 @@ describe('Assets', async function () {
             source: NATIVE_ASSET_SOURCE_AND_ADDRESS,
             type: TYPE_NATIVE,
             precision: 8,
-            minFee: 1000000,
+            minFee: FEE,
             isActive: true
         })
 
         // Adding the same token again
-        const txFail2 = invokeScript(params, accounts.admin);
-        await expect(broadcast(txFail2)).to.be.rejectedWith("exists");
+        await expect(addAsset(NATIVE_ASSET_ID, NATIVE_ASSET_SOURCE_AND_ADDRESS, FEE)).rejectedWith("exists");
+
     });
 
     it('add asset (wrapped)', async function () {
-        const addedToken = await broadcastAndWait(invokeScript({
-            dApp: address(accounts.bridge),
-            call: {
-                function: "issue",
-                args: [
-                    {type:'string', value: "Wrapped name"},
-                    {type:'string', value: "Wrapped description"},
-                    {type:'integer', value: 6},
-                ]
-            },
-            fee: "100500000"}, accounts.admin))
 
-        const assetId = base58ToBase64(addedToken.stateChanges.issues[0].assetId);
+        const assetIdB58 = await issueAsset(6);
+        const assetId = base58ToBase64(assetIdB58);
 
-        const params = {
-            dApp: address(accounts.bridge),
-            call: {
-                function: "addAsset",
-                args: [
-                    {type:'binary', value: WRAPPED_ASSET_SOURCE_AND_ADDRESS},
-                    {type:'binary', value: assetId},
-                    {type:'integer', value: 1000000},
-                ]
-            },
-            fee: "100500000"
-        };
-
-        // Wrong signer
-        const txFail1 = invokeScript(params, accounts.alice);
-        await expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
-
-        // Successfully added
-        const tx = invokeScript(params, accounts.admin);
-
-        await broadcastAndWait(tx);
-
+        await addAsset(assetId, WRAPPED_ASSET_SOURCE_AND_ADDRESS, FEE);
         expect(await getAssetId(WRAPPED_ASSET_SOURCE_AND_ADDRESS)).to.be.equal(assetId);
 
         const tokenInfo = await getTokenInfo(assetId);
@@ -204,39 +121,42 @@ describe('Assets', async function () {
             source: WRAPPED_ASSET_SOURCE_AND_ADDRESS,
             type: TYPE_WRAPPED,
             precision: 6,
-            minFee: 1000000,
+            minFee: FEE,
             isActive: true
         })
 
         // Adding the same token again
-        const txFail2 = invokeScript(params, accounts.admin);
-        await expect(broadcast(txFail2)).to.be.rejectedWith("exists");
+        await expect(addAsset(assetId, WRAPPED_ASSET_SOURCE_AND_ADDRESS, FEE)).rejectedWith("exists");
     });
 
-    it('remove (base)', async () => {
-        const params = {
-            dApp: address(accounts.bridge),
-            call: {
-                function: "removeAsset",
-                args: [
-                    {type:'binary', value: BASE_ASSET_SOURCE_AND_ADDRESS},
-                    {type:'binary', value: NEW_OWNER},
-                ]
-            }
-        };
+    it('fail: remove invalid signer', async () => {
+        const result = removeToken(BASE_ASSET_SOURCE_AND_ADDRESS, undefined, accounts.alice);
+        await expect(result).rejectedWith("unauthorized");
+    })
 
+    it('setMinFee', async () => {
+        const newMinFee = 12345;
+        await expect(setMinFee(BASE_ASSET_ID, newMinFee, accounts.alice)).rejectedWith("unauthorized");
+        await setMinFee(BASE_ASSET_ID, newMinFee);
+        const tokenInfo = await getTokenInfo(BASE_ASSET_ID);
+        expect(tokenInfo.minFee).equal(newMinFee);
+        await setMinFee(BASE_ASSET_ID, FEE)
+    })
+
+    it('disable token', async () => {
+        await expect(setAssetState(BASE_ASSET_ID, false, accounts.alice)).rejectedWith("unauthorized");
+        await setAssetState(BASE_ASSET_ID, false);
+        const tokenInfo = await getTokenInfo(BASE_ASSET_ID);
+        expect(tokenInfo.isActive).equal(false);
+        await setAssetState(BASE_ASSET_ID, true);
+    })
+
+    it('remove (base)', async () => {
         const bridgeBalanceBefore = await balance(address(accounts.bridge));
         const nweOwnerBalanceBefore = await balance(address(accounts.newOwner));
 
-
-        // Wrong signer
-        const txFail1 = invokeScript(params, accounts.alice);
-        await expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
-
         // Successfully added
-        const tx = invokeScript(params, accounts.admin);
-
-        await broadcastAndWait(tx);
+        await removeToken(BASE_ASSET_SOURCE_AND_ADDRESS);
 
         const bridgeBalanceAfter = await balance(address(accounts.bridge));
         const nweOwnerBalanceAfter = await balance(address(accounts.newOwner));
@@ -257,33 +177,14 @@ describe('Assets', async function () {
         })
       
         // Remove the same token again
-        const txFail2 = invokeScript(params, accounts.admin);
-        await expect(broadcast(txFail2)).rejectedWith("not exists");
+        await expect(removeToken(BASE_ASSET_SOURCE_AND_ADDRESS)).rejectedWith("not exists");
     })
 
     it('remove (native)', async () => {
-        const params = {
-            dApp: address(accounts.bridge),
-            call: {
-                function: "removeAsset",
-                args: [
-                    {type:'binary', value: NATIVE_ASSET_SOURCE_AND_ADDRESS},
-                    {type:'binary', value: NEW_OWNER}
-                ]
-            }
-        };
-
         const bridgeBalanceBefore = await assetBalance(NATIVE_ASSET_ID_B58, address(accounts.bridge)) || 0;
         const newOwnerBalanceBefore = await assetBalance(NATIVE_ASSET_ID_B58, address(accounts.newOwner)) || 0;
 
-        // Wrong signer
-        const txFail1 = invokeScript(params, accounts.alice);
-        await expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
-
-        // Successfully added
-        const tx = invokeScript(params, accounts.admin);
-
-        await broadcastAndWait(tx);
+        await removeToken(NATIVE_ASSET_SOURCE_AND_ADDRESS);
 
         const bridgeBalanceAfter = await assetBalance(NATIVE_ASSET_ID_B58, address(accounts.bridge)) || 0;
         const newOwnerBalanceAfter = await assetBalance(NATIVE_ASSET_ID_B58, address(accounts.newOwner)) || 0;
@@ -304,32 +205,13 @@ describe('Assets', async function () {
         })
       
         // Remove the same token again
-        const txFail2 = invokeScript(params, accounts.admin);
-        await expect(broadcast(txFail2)).rejectedWith("not exists");
+        await expect(removeToken(NATIVE_ASSET_SOURCE_AND_ADDRESS)).rejectedWith("not exists");
     })
 
     it('remove (wrapped)', async () => {
-        const params = {
-            dApp: address(accounts.bridge),
-            call: {
-                function: "removeAsset",
-                args: [
-                    {type:'binary', value: WRAPPED_ASSET_SOURCE_AND_ADDRESS},
-                    {type:'binary', value: NEW_OWNER}
-                ]
-            }
-        };
-
         const assetId = await getAssetId(WRAPPED_ASSET_SOURCE_AND_ADDRESS);
 
-        // Wrong signer
-        const txFail1 = invokeScript(params, accounts.alice);
-        await expect(broadcast(txFail1)).to.be.rejectedWith("unauthorized");
-
-        // Successfully added
-        const tx = invokeScript(params, accounts.admin);
-
-        await broadcastAndWait(tx);
+        await removeToken(WRAPPED_ASSET_SOURCE_AND_ADDRESS);
 
         const assetIdAfter = await getAssetId(WRAPPED_ASSET_SOURCE_AND_ADDRESS);
         expect(assetIdAfter).equal(null);
@@ -344,7 +226,6 @@ describe('Assets', async function () {
         })
 
         // Remove the same token again
-        const txFail2 = invokeScript(params, accounts.admin);
-        await expect(broadcast(txFail2)).rejectedWith("not exists");
+        await expect(removeToken(WRAPPED_ASSET_SOURCE_AND_ADDRESS)).rejectedWith("not exists");
     })
 })

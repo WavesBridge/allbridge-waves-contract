@@ -1,5 +1,5 @@
-const {accountSeedToBase64, toWavelet, broadcastAndWait, base58ToBase64, initValidatorContract,
-    initBridgeContract, getLockData, base64ToString, getSignature, invokeAndWait, clone, generateLockId, lock,
+const {accountSeedToBase64, toWavelet, base58ToBase64, initValidatorContract,
+    initBridgeContract, getLockData, generateLockId, lock,
     setAssetState, initNativeToken, mintToken, addAsset, issueAsset, unlock, hasUnlock
 } = require('./utils');
 
@@ -11,10 +11,6 @@ const NATIVE_ASSET_SOURCE_AND_ADDRESS = Buffer.concat([NATIVE_ASSET_SOURCE, NATI
 const WRAPPED_ASSET_SOURCE = Buffer.from("WAVE")
 const WRAPPED_ASSET_ADDRESS = Buffer.from("1122334455667788990011223344556677889900", "hex")
 const WRAPPED_ASSET_SOURCE_AND_ADDRESS = Buffer.concat([WRAPPED_ASSET_SOURCE, WRAPPED_ASSET_ADDRESS]).toString("base64")
-
-const TYPE_BASE = 0;
-const TYPE_NATIVE = 1;
-const TYPE_WRAPPED = 2;
 
 const BASE_ASSET_SOURCE_AND_ADDRESS = "V0FWRVdBVkUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const BASE_ASSET_ID = "V0FWRQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
@@ -179,7 +175,7 @@ describe('Assets', async function () {
         it('wrapped', async function () {
             const lockId = generateLockId();
 
-            const bridgeBalanceBefore = await assetBalance(WRAPPED_ASSET_ID_B58, address(accounts.bridge)) || 0;
+            await assetBalance(WRAPPED_ASSET_ID_B58, address(accounts.bridge)) || 0;
             const userBalanceBefore = await assetBalance(WRAPPED_ASSET_ID_B58, address(accounts.alice)) || 0;
             const feeCollectorBalanceBefore = await assetBalance(WRAPPED_ASSET_ID_B58, address(accounts.feeCollector)) || 0;
 

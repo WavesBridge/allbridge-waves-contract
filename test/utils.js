@@ -1,6 +1,4 @@
-const BN = require('bn.js')
 const eth = require('ethereumjs-util');
-const {base64Decode} = require('@waves/ts-lib-crypto');
 
 function accountSeedToBase64(accountSeed) {
     return base58ToBase64(address(accountSeed));
@@ -225,15 +223,16 @@ function setAssetState(assetId, state, sender) {
     }, sender)
 }
 
-function addAsset(assetId, assetSource, fee) {
+function addAsset(assetId, assetSource, fee, sender) {
+    sender = sender || accounts.admin;
     return invokeAndWait({dApp: address(accounts.bridge), functionName: 'addAsset', arguments: [
             {type: 'binary', value: assetSource},
             {type: 'binary', value: assetId},
             {type: 'integer', value: fee}
-        ]}, accounts.admin);
+        ]}, sender);
 }
 
-async function issueAsset() {
+async function issueAsset(precision = 8) {
     const tx = await broadcastAndWait(invokeScript({
         dApp: address(accounts.bridge),
         call: {
@@ -241,12 +240,38 @@ async function issueAsset() {
             args: [
                 {type:'string', value: "Wrapped name"},
                 {type:'string', value: "Wrapped description"},
-                {type:'integer', value: 8},
+                {type:'integer', value: precision},
             ]
         },
         fee: "100500000"}, accounts.admin))
 
     return tx.stateChanges.issues[0].assetId;
+}
+
+async function removeToken(source, newOwner, sender) {
+    sender = sender || accounts.admin;
+    newOwner = newOwner || base58ToBase64(address(accounts.newOwner));
+
+    return invokeAndWait({
+        dApp: address(accounts.bridge),
+            functionName: "removeAsset",
+            arguments: [
+                {type:'binary', value: source},
+                {type:'binary', value: newOwner},
+            ]
+    }, sender)
+}
+
+async function setMinFee(assetId, minFee, sender) {
+    sender = sender || accounts.admin;
+    return invokeAndWait({
+        dApp: address(accounts.bridge),
+        functionName: "setMinFee",
+        arguments: [
+            {type:'binary', value: assetId},
+            {type:'integer', value: minFee},
+        ]
+    }, sender)
 }
 
 async function hasUnlock(lockSource, lockId) {
@@ -281,5 +306,7 @@ module.exports = {
     mintToken,
     addAsset,
     issueAsset,
-    hasUnlock
+    hasUnlock,
+    removeToken,
+    setMinFee
 }
