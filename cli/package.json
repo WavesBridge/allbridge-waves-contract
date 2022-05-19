@@ -1,0 +1,34 @@
+{
+  "name": "waves-bridge",
+  "version": "1.0.0",
+  "engines": {
+    "node": "16.x"
+  },
+  "dependencies": {
+    "@ledgerhq/hw-transport-node-hid": "^6.27.1",
+    "@ledgerhq/hw-transport-node-hid-singleton": "^6.27.1",
+    "@waves/ledger": "^4.0.0",
+    "@waves/ride-js": "^2.2.0-beta.5",
+    "@waves/ts-types": "^1.0.8-beta.2",
+    "@waves/waves-transactions": "^4.2.5-beta.3",
+    "bs58": "^5.0.0",
+    "clear": "^0.1.0",
+    "clui": "^0.3.6",
+    "clui-live": "^0.3.4",
+    "conf": "^10.1.2",
+    "inquirer": "^8.2.4",
+    "inquirer-file-tree-selection-prompt": "^1.0.19",
+    "inquirer-interrupted-prompt": "^1.0.2"
+  },
+  "devDependencies": {
+    "@types/clui": "^0.3.1",
+    "@types/inquirer": "^8.2.1",
+    "typescript": "^4.6.4"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "bin": {
+    "waves-bridge": "index.js"
+  }
+}
