@@ -1,47 +1,40 @@
-import {
-  base58ToBase64,
-  chainIdToName,
-  displayArgs,
-  getCurrentUser,
-  handleInterrupt,
-  sendInvokeScript, validateAssetId
-} from '../../utils';
+import {chainIdToName, displayArgs, getCurrentUser, handleInterrupt, sendInvokeScript} from '../../utils';
 import * as inquirer from 'inquirer';
 import {Store} from '../../store';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {setBridgeAddress} from '../settings/settings';
 
-export async function setFeeCollector() {
+export async function setBaseFeeRate() {
   try {
     if (!Store.bridgeAddress) {
       await setBridgeAddress()
     }
     const signer = await getCurrentUser();
     const {
-      feeCollector
+      baseFeeRate
     } = await inquirer
       .prompt([
         {
-          type: 'input',
-          name: 'feeCollector',
-          message: 'Fee collector address',
-          validate: validateAssetId
+          type: 'number',
+          name: 'baseFeeRate',
+          message: 'Base fee rate %'
         }
       ]);
+    const baseFeeRateBp = Math.floor(baseFeeRate * 100);
 
-    await displayArgs('You are going to set bridge fee collector address', [
+    await displayArgs('You are going to set base fee rate', [
       {key: "Node", value: `${Store.node.address} (${chainIdToName(Store.node.chainId)})`},
       {key: "Bridge", value: Store.bridgeAddress},
-      {key: "Fee collector", value: feeCollector},
+      {key: "Base fee rate", value: `${baseFeeRate}% (${baseFeeRateBp})`},
       {key: "Signer", value: signer.address},
     ])
 
     const params: IInvokeScriptParams = {
       dApp: Store.bridgeAddress,
       call: {
-        function: "setFeeCollector",
+        function: "setBaseFeeRate",
         args: [
-          {type:'binary', value: base58ToBase64(feeCollector)},
+          {type: 'integer', value: baseFeeRateBp},
         ]
       }
     }

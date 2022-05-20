@@ -1,6 +1,6 @@
 import * as inquirer from 'inquirer';
 import {Store} from '../../store';
-import {chainIdToName, getLedger, spinnerStyle} from '../../utils';
+import {chainIdToName, getLedger, handleInterrupt, spinnerStyle} from '../../utils';
 import clc from 'cli-color';
 import {setNetwork} from '../settings/settings';
 import {Spinner} from 'clui';
@@ -20,7 +20,6 @@ export async function authLedger() {
         }
       ]);
 
-
     const ledger = getLedger(Store.node.chainId)
 
     const spinner = new Spinner('Please, connect your Ledger Device and enter to the Waves application', spinnerStyle);
@@ -36,11 +35,7 @@ export async function authLedger() {
       console.log(clc.red('Connection timeout. Please, connect your Ledger Device and enter to the Waves application\n'));
     }
   } catch (e) {
-    if (e === 'EVENT_INTERRUPTED') {
-      return
-    } else {
-      throw e
-    }
+    handleInterrupt(e)
   }
 }
 

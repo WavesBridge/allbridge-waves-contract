@@ -1,6 +1,7 @@
 import inquirer, {Separator} from 'inquirer';
 import {deployBridge} from './deploy-bridge';
-import {deployValicator} from './deploy-validator';
+import {deployValidator} from './deploy-validator';
+import {handleInterrupt} from '../../utils';
 
 enum DEPLOY_ACTION {
   BRIDGE,
@@ -21,13 +22,13 @@ export async function deploy() {
           new Separator()
         ]
       }
-    ]).catch(() => ({action: '..'}));
+    ]).catch(handleInterrupt);
 
   switch (action) {
     case DEPLOY_ACTION.BRIDGE:
       return await deployBridge();
     case DEPLOY_ACTION.VALIDATOR:
-      return await deployValicator();
+      return await deployValidator();
     default:
       return
   }

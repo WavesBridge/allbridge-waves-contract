@@ -1,5 +1,5 @@
 import inquirer, {Separator} from 'inquirer';
-import {CHAIN_ID, EVENT_INTERRUPTED, handleInterrupt, validateAddress} from '../../utils';
+import {CHAIN_ID, handleInterrupt, validateAddress} from '../../utils';
 import {Store} from '../../store';
 
 enum SETTINGS_ACTION {
@@ -37,7 +37,7 @@ export async function settings() {
   }
 }
 
-async function setBridgeAddress() {
+export async function setBridgeAddress() {
   try {
     const {bridgeAddress} = await inquirer
       .prompt([
@@ -56,7 +56,7 @@ async function setBridgeAddress() {
   }
 }
 
-async function setValidatorAddress() {
+export async function setValidatorAddress() {
   try {
     const {validatorAddress} = await inquirer
       .prompt([
@@ -65,7 +65,7 @@ async function setValidatorAddress() {
           name: 'validatorAddress',
           message: 'Specify a validator address',
           validate: validateAddress,
-          default: Store.bridgeAddress
+          default: Store.validatorAddress
         }
       ]);
 

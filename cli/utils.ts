@@ -6,7 +6,7 @@ import {auth} from './actions/auth/auth';
 import {default as WavesLedger} from '@waves/ledger';
 import {default as TransportNodeHid} from '@ledgerhq/hw-transport-node-hid-singleton';
 import {IInvokeScriptParams, ISetScriptParams, WithId, WithProofs} from '@waves/waves-transactions/src/transactions';
-import {InvokeScriptTransaction, SetScriptTransaction, Transaction, TRANSACTION_TYPE} from '@waves/ts-types';
+import {InvokeScriptTransaction, SetScriptTransaction, TRANSACTION_TYPE} from '@waves/ts-types';
 import {DEFAULT_VERSIONS} from '@waves/waves-transactions/dist/defaultVersions';
 import {
   fee,
@@ -241,6 +241,22 @@ export function validateAddress(address: string): boolean | string {
   }
 }
 
+export function validateAssetId(address: string): boolean | string {
+  try {
+    if (base58.decode(address).length !== 32) {
+      return 'Invalid asset id'
+    }
+    return true;
+  } catch (e) {
+    return 'Invalid asset id'
+  }
+}
+
+export function validateHex(hex: string): boolean | string {
+    return /^0x[0-9a-f]$/i.test(hex) || 'Invalid hex';
+}
+
+
 export function utf8ToBuffer(data: string, length: number): Buffer {
   return Buffer.concat([Buffer.from(data), Buffer.alloc(length, 0)], length);
 }
@@ -254,6 +270,10 @@ export function hexToBuffer(data: string, length: number): Buffer {
     [Buffer.from(data.replace(/^0x/i, ''), 'hex'), Buffer.alloc(length, 0)],
     length,
   );
+}
+
+export function hexToBase64(data: string): string {
+  return Buffer.from(data.replace(/^0x/i, ''), 'hex').toString('base64')
 }
 
 export function tokenSourceAndAddressToWavesSource(
@@ -271,4 +291,8 @@ export async function getAssetInfo(assetId: string) {
   }
   const response = await axios.get(`${Store.node.address}/assets/details/${assetId}`)
   return response.data;
+}
+
+export function toInt(value: number, precision: number): number {
+  return Math.floor(value * Math.pow(10, precision))
 }

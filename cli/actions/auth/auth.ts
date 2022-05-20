@@ -1,9 +1,9 @@
 import * as inquirer from 'inquirer';
+import {Separator} from 'inquirer';
 import {authLedger} from './auth-ledger';
 import {authKeyFile} from './auth-key-file';
 import {Store} from '../../store';
 import {setNetwork} from '../settings/settings';
-import {Separator} from 'inquirer';
 
 enum AUTH_TYPE {
   LEDGER,

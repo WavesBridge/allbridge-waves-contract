@@ -1,10 +1,24 @@
-import {base58ToBase64, chainIdToName, displayArgs, handleInterrupt, sendInvokeScript} from '../../utils';
+import {
+  base58ToBase64,
+  chainIdToName,
+  displayArgs,
+  handleInterrupt,
+  sendInvokeScript,
+  validateAssetId
+} from '../../utils';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {Store} from '../../store';
 import * as inquirer from 'inquirer';
+import {setBridgeAddress, setValidatorAddress} from '../settings/settings';
 
 export async function initBridge() {
   try {
+    if (!Store.bridgeAddress) {
+      await setBridgeAddress()
+    }
+    if (!Store.validatorAddress) {
+      await setValidatorAddress()
+    }
     const {
       bridgeManager,
       feeCollector,
@@ -16,16 +30,19 @@ export async function initBridge() {
           type: 'input',
           name: 'bridgeManager',
           message: 'Bridge manager address',
+          validate: validateAssetId
         },
         {
           type: 'input',
           name: 'feeCollector',
           message: 'Fee collector address',
+          validate: validateAssetId
         },
         {
           type: 'input',
           name: 'unlockSigner',
           message: 'Unlock signer address',
+          validate: validateAssetId
         },
         {
           type: 'number',
@@ -42,7 +59,7 @@ export async function initBridge() {
       {key: "Bridge manager", value: bridgeManager},
       {key: "Fee collector address", value: feeCollector},
       {key: "Unlock signer precision", value: unlockSigner},
-      {key: "Base fee rate", value: `${unlockSigner}% (${baseFeeRateBp})`},
+      {key: "Base fee rate", value: `${baseFeeRate}% (${baseFeeRateBp})`},
     ])
 
     const params: IInvokeScriptParams = {

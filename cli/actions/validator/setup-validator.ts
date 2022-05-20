@@ -1,5 +1,10 @@
 import * as inquirer from 'inquirer';
 import {Separator} from 'inquirer';
+import {initValidator} from './init-validator';
+import {setAdmin} from './set-admin';
+import {setOracle} from './set-oracle';
+import {setValidatorBridge} from './set-bridge';
+import {handleInterrupt} from '../../utils';
 
 enum VALIDATOR_ACTION {
   INIT,
@@ -24,9 +29,17 @@ export async function setupValidator() {
           new Separator()
         ]
       }
-    ]).catch(() => ({action: '..'}));
+    ]).catch(handleInterrupt);
 
   switch (validatorAction) {
+    case VALIDATOR_ACTION.INIT:
+      return initValidator()
+    case VALIDATOR_ACTION.SET_ADMIN:
+      return setAdmin()
+    case VALIDATOR_ACTION.SET_ORACLE:
+      return setOracle()
+    case VALIDATOR_ACTION.SET_BRIDGE:
+      return setValidatorBridge()
     default:
       return
   }

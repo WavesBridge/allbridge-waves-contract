@@ -1,17 +1,21 @@
 import * as inquirer from 'inquirer';
-import {broadcast, invokeScript} from '@waves/waves-transactions';
+import {Separator} from 'inquirer';
 import {Store} from '../../store';
 import {
   base58ToBase64,
   chainIdToName,
-  displayArgs, getAssetInfo, handleInterrupt,
+  displayArgs,
+  getAssetInfo,
+  getCurrentUser,
+  handleInterrupt,
   sendInvokeScript,
+  toInt,
   tokenSourceAndAddressToWavesSource
 } from '../../utils';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import clc from 'cli-color';
-import {Separator} from 'inquirer';
 import {setupAssets} from './setup-assets';
+import {setBridgeAddress} from '../settings/settings';
 
 enum TOKEN_TYPE {
   BASE,
@@ -51,23 +55,30 @@ export async function addAsset() {
 
 export async function addWrappedAsset() {
   try {
+    const signer = await getCurrentUser();
+    if (!Store.bridgeAddress) {
+      await setBridgeAddress()
+    }
     const {tokenName, tokenDescription, precision} = await inquirer
       .prompt([
         {
           type: 'input',
           name: 'tokenName',
           message: 'Token name (Symbol) (From 4 to 16 bytes, 1 character can take up to 4 bytes)',
+          validate: input => 4 <= input.length && input.length <= 8,
         },
         {
           type: 'input',
           name: 'tokenDescription',
           message: 'Token description (Up to 1000 bytes)',
-          default: ''
+          default: '',
+          validate: input => input.length <= 1000,
         },
         {
           type: 'number',
           name: 'precision',
           message: 'Token precision (Number of decimal places, from 0 to 8)',
+          validate: input => 0 <= input && input <= 8,
           default: 8
         }
       ]);
@@ -91,6 +102,7 @@ export async function addWrappedAsset() {
       {key: "Token name", value: tokenName},
       {key: "Token description", value: tokenDescription},
       {key: "Token precision", value: precision},
+      {key: "Signer", value: signer.address},
     ])
 
     const issueTsResult = await sendInvokeScript(issueParams);
@@ -105,6 +117,10 @@ export async function addWrappedAsset() {
 
 export async function addNativeAsset(assetIdArg?: string) {
   try {
+    const signer = await getCurrentUser();
+    if (!Store.bridgeAddress) {
+      await setBridgeAddress()
+    }
     const {tokenSource, tokenSourceAddress, minFeeFloat, assetId = assetIdArg} = await inquirer
       .prompt([
         {
@@ -146,8 +162,9 @@ export async function addNativeAsset(assetIdArg?: string) {
       {key: "Token source", value: tokenSource},
       {key: "Token source address", value: tokenSourceAddress},
       {key: "Token source and address", value: assetSourceAndAddress},
-      {key: "Token in fee", value: `${minFeeFloat} (${minFeeInt})`},
+      {key: "Token min fee", value: `${minFeeFloat} (${minFeeInt})`},
       {key: "Asset id", value: `${assetId} (${assetIdB64})`},
+      {key: "Signer", value: signer.address},
     ])
 
     const addAssetParams: IInvokeScriptParams = {
@@ -169,18 +186,23 @@ export async function addNativeAsset(assetIdArg?: string) {
 
 async function addBaseAsset() {
   try {
-    const {minFee} = await inquirer
+    const signer = await getCurrentUser();
+    if (!Store.bridgeAddress) {
+      await setBridgeAddress()
+    }
+    const {minFeeFloat} = await inquirer
       .prompt([
         {
           type: 'number',
-          name: 'minFee',
-          message: 'Specify asset min fee'
+          name: 'minFeeFloat',
+          message: 'Min fee (float)'
         }
       ]);
-    const minFeeInt = Math.floor(minFee * 1e8);
+    const minFeeInt = toInt(minFeeFloat, 8);
     const assetSource = 'V0FWRVdBVkUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
     const assetId = 'V0FWRQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
-    const signedTx = invokeScript({
+
+    const params: IInvokeScriptParams = {
       dApp: Store.bridgeAddress,
       call: {
         function: 'addAsset',
@@ -189,11 +211,17 @@ async function addBaseAsset() {
           {type: 'binary', value: assetId},
           {type: 'integer', value: minFeeInt}
         ]
-      },
-      chainId: Store.node.chainId
-    }, Store.seed);
-    const result = await broadcast(signedTx, Store.node.address).catch(console.error)
-    console.log(result);
+      }
+    }
+
+    await displayArgs('You are going to add base WAVES token', [
+      {key: "Node", value: `${Store.node.address} (${chainIdToName(Store.node.chainId)})`},
+      {key: "Bridge", value: Store.bridgeAddress},
+      {key: "Token min fee", value: `${minFeeFloat} (${minFeeInt})`},
+      {key: "Signer", value: signer.address},
+    ])
+
+    await sendInvokeScript(params)
   } catch (e) {
     handleInterrupt(e);
   }

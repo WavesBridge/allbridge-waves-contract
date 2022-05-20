@@ -2,6 +2,10 @@ import * as inquirer from 'inquirer';
 import {Separator} from 'inquirer';
 import {initBridge} from './init-bridge';
 import {setManager} from './set-manager';
+import {setFeeCollector} from './set-fee-collector';
+import {setValidator} from './set-validator';
+import {startBridge} from './start-bridge';
+import {stopBridge} from './stop-bridge';
 
 enum BRIDGE_ACTION {
   INIT,
@@ -28,7 +32,8 @@ export async function setupBridge() {
           {name: 'Stop bridge', value: BRIDGE_ACTION.STOP_BRIDGE},
           '..',
           new Separator()
-        ]
+        ],
+        pageSize: 8
       }
     ]).catch(() => ({action: '..'}));
 
@@ -37,6 +42,14 @@ export async function setupBridge() {
       return initBridge()
     case BRIDGE_ACTION.SET_MANAGER:
       return setManager()
+    case BRIDGE_ACTION.SET_FEE_COLLECTOR:
+      return setFeeCollector()
+    case BRIDGE_ACTION.SET_VALIDATOR:
+      return setValidator()
+    case BRIDGE_ACTION.START_BRIDGE:
+      return startBridge()
+    case BRIDGE_ACTION.STOP_BRIDGE:
+      return stopBridge()
     default:
       return
   }
