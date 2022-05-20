@@ -5,12 +5,14 @@
     "node": "16.x"
   },
   "dependencies": {
+    "@inquirer/select": "^0.0.20-alpha.0",
     "@ledgerhq/hw-transport-node-hid": "^6.27.1",
     "@ledgerhq/hw-transport-node-hid-singleton": "^6.27.1",
     "@waves/ledger": "^4.0.0",
     "@waves/ride-js": "^2.2.0-beta.5",
     "@waves/ts-types": "^1.0.8-beta.2",
     "@waves/waves-transactions": "^4.2.5-beta.3",
+    "axios": "^0.27.2",
     "bs58": "^5.0.0",
     "clear": "^0.1.0",
     "clui": "^0.3.6",

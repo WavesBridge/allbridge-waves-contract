@@ -1,57 +1,30 @@
-import clear from 'clear';
-import {logo} from './logo';
+
 import inquirer, {Separator} from 'inquirer';
 import InterruptedPrompt from 'inquirer-interrupted-prompt';
 
 import FileTreeSelectionPrompt from 'inquirer-file-tree-selection-prompt';
-import {auth} from './config/auth';
+import {auth} from './actions/auth/auth';
 import {deploy} from './actions/deploy/deploy';
-import {settings} from './config/settings';
-import {Store} from './config/store';
+import {settings} from './actions/settings/settings';
 import {setupAssets} from './actions/asset/setup-assets';
 import {setupBridge} from './actions/bridge/setup-bridge';
 import {setupValidator} from './actions/validator/setup-validator';
 import {view} from './actions/view/view';
+import {printLogo} from './logo';
 
 InterruptedPrompt.replaceAllDefaults(inquirer);
 inquirer.registerPrompt('file-tree-selection', FileTreeSelectionPrompt)
 
-const CLI = require('clui'),
-    clc = require('cli-color');
-
-const Line = CLI.Line,
-    LineBuffer = CLI.LineBuffer;
-
-let outputBuffer = new LineBuffer({
-    x: 0,
-    y: 0,
-    width: 'console',
-    height: 'console'
-});
-logo.split('\n').forEach(line => outputBuffer.addLine(new Line().column(line, 68)))
-
-new Line(outputBuffer)
-    .fill()
-    .store();
-
-new Line(outputBuffer)
-    .column('Bridge vddress:', 20, [clc.cyan])
-    .column(Store.bridgeAddress, undefined, [clc.white])
-    .fill()
-    .store();
-
-new Line(outputBuffer)
-  .column('Validator address:', 20, [clc.cyan])
-  .column(Store.validatorAddress || '', undefined, [clc.white])
-  .fill()
-  .store();
-
-new Line(outputBuffer)
-    .fill()
-    .store();
-clear()
-outputBuffer.output();
-
+enum START_ACTION {
+    AUTH,
+    SETUP_ASSETS,
+    SETUP_BRIDGE,
+    SETUP_VALIDATOR,
+    DEPLOY,
+    VIEW,
+    SETTINGS,
+    EXIT
+}
 async function start() {
     const {action} = await inquirer
         .prompt([
@@ -59,36 +32,47 @@ async function start() {
                 type: 'list',
                 name: 'action',
                 message: 'Chose an action',
-                choices: ['Auth', 'Setup Assets', 'Setup Bridge', 'Setup Validator', 'Deploy', 'View', 'Settings', 'Exit', new Separator()]
+                choices: [
+                    {name: 'Auth', value: START_ACTION.AUTH},
+                    {name: 'Setup Assets', value: START_ACTION.SETUP_ASSETS},
+                    {name: 'Setup Bridge', value: START_ACTION.SETUP_BRIDGE},
+                    {name: 'Setup Validator', value: START_ACTION.SETUP_VALIDATOR},
+                    {name: 'Deploy', value: START_ACTION.DEPLOY},
+                    {name: 'View', value: START_ACTION.VIEW},
+                    {name: 'Settings', value: START_ACTION.SETTINGS},
+                    {name: 'Exit', value: START_ACTION.EXIT},
+                    new Separator()],
+                pageSize: 9
             }
-        ]).catch(() => ({action: 'Exit'}));
+        ]).catch(() => ({action: START_ACTION.EXIT}));
+
     switch (action) {
-        case 'Auth':
+        case START_ACTION.AUTH:
             await auth()
             break
-        case 'Setup Assets':
+        case START_ACTION.SETUP_ASSETS:
             await setupAssets()
             break
-        case 'Setup Bridge':
+        case START_ACTION.SETUP_BRIDGE:
             await setupBridge()
             break
-        case 'Setup Validator':
+        case START_ACTION.SETUP_VALIDATOR:
             await setupValidator()
             break
-        case 'Deploy':
+        case START_ACTION.DEPLOY:
             await deploy()
             break
-        case 'View':
+        case START_ACTION.VIEW:
             await view()
             break
-        case 'Settings':
+        case START_ACTION.SETTINGS:
             await settings()
             break
-        case 'Exit':
+        case START_ACTION.EXIT:
             return
     }
 
     return start();
 }
-
+printLogo()
 start()

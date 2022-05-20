@@ -1,8 +1,14 @@
 import * as inquirer from 'inquirer';
 import {authLedger} from './auth-ledger';
 import {authKeyFile} from './auth-key-file';
-import {Store} from './store';
-import {setNetwork} from './settings';
+import {Store} from '../../store';
+import {setNetwork} from '../settings/settings';
+import {Separator} from 'inquirer';
+
+enum AUTH_TYPE {
+  LEDGER,
+  KEY_FILE
+}
 
 export async function auth(fast = false) {
   if (!Store.node) {
@@ -22,14 +28,21 @@ export async function auth(fast = false) {
         type: 'list',
         name: 'authType',
         message: 'Select auth option',
-        choices: ['Ledger', 'Key file']
+        choices: [
+          {name: 'Ledger', value: AUTH_TYPE.LEDGER},
+          {name: 'Key file', value: AUTH_TYPE.KEY_FILE},
+          '..',
+          new Separator()
+        ]
       }
-    ]);
+    ]).catch(() => ({action: '..'}));
 
   switch (authType) {
-    case 'Ledger':
+    case AUTH_TYPE.LEDGER:
       return authLedger()
-    case 'Key file':
+    case AUTH_TYPE.KEY_FILE:
       return authKeyFile()
+    default:
+      return
   }
 }

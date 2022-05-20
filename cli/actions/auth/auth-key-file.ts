@@ -1,10 +1,10 @@
 import inquirer from 'inquirer';
 import fs from 'fs';
 import * as Waves from '@waves/waves-transactions';
-import {Store} from './store';
+import {Store} from '../../store';
 import path from 'path';
 import {seedUtils} from '@waves/waves-transactions';
-import {setNetwork} from './settings';
+import {setNetwork} from '../settings/settings';
 
 
 export async function authKeyFile(fast = false) {

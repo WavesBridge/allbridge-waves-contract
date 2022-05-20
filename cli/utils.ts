@@ -1,12 +1,12 @@
 import base58 from 'bs58';
-import {Store} from './config/store';
+import {Store} from './store';
 import {base58Encode, blake2b, signBytes} from '@waves/ts-lib-crypto';
-import {broadcast, seedUtils} from '@waves/waves-transactions';
-import {auth} from './config/auth';
+import {broadcast, seedUtils, waitForTx} from '@waves/waves-transactions';
+import {auth} from './actions/auth/auth';
 import {default as WavesLedger} from '@waves/ledger';
 import {default as TransportNodeHid} from '@ledgerhq/hw-transport-node-hid-singleton';
 import {IInvokeScriptParams, ISetScriptParams, WithId, WithProofs} from '@waves/waves-transactions/src/transactions';
-import {InvokeScriptTransaction, SetScriptTransaction, TRANSACTION_TYPE} from '@waves/ts-types';
+import {InvokeScriptTransaction, SetScriptTransaction, Transaction, TRANSACTION_TYPE} from '@waves/ts-types';
 import {DEFAULT_VERSIONS} from '@waves/waves-transactions/dist/defaultVersions';
 import {
   fee,
@@ -19,17 +19,37 @@ import {binary} from '@waves/marshall';
 import clc from 'cli-color';
 import CLI from 'clui';
 import * as inquirer from 'inquirer';
+import axios from 'axios';
+import {setNetwork} from './actions/settings/settings';
+
+export const spinnerStyle = ['⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷'];
+
+export enum CHAIN_ID {
+  MAINNET = 87,
+  TESTNET = 84,
+  STAGENET = 83
+}
+
+export const EVENT_INTERRUPTED = 'EVENT_INTERRUPTED';
+export function handleInterrupt(e) {
+  if (e === EVENT_INTERRUPTED) {
+    console.log()
+    return {}
+  } else {
+    throw e
+  }
+}
 
 export function chainIdToName(chinId: number | string): string {
   switch (chinId) {
     case 'W':
-    case 87:
+    case CHAIN_ID.MAINNET:
       return 'mainnet'
     case 'T':
-    case 84:
+    case CHAIN_ID.TESTNET:
       return 'testnet'
     case 'S':
-    case 83:
+    case CHAIN_ID.STAGENET:
       return 'stagenet'
     default:
       return 'INVALID_NETWORK'
@@ -57,7 +77,7 @@ export async function sign(data: Uint8Array): Promise<string> {
   }
 
   if (Store.useLedger) {
-    const spinner = new CLI.Spinner('Approve transaction with your Ledger device', ['⣾','⣽','⣻','⢿','⡿','⣟','⣯','⣷']);
+    const spinner = new CLI.Spinner('Approve transaction with your Ledger device', spinnerStyle);
     spinner.start();
     const ledger = getLedger(Store.node.chainId);
     try {
@@ -128,7 +148,7 @@ export async function sendSetScript(params: ISetScriptParams): Promise<any> {
 
   if (params.script === undefined) throw new Error('Script field cannot be undefined. Use null explicitly to remove script')
 
-  const tx: SetScriptTransaction & WithId & WithProofs & {feeAssetId: string | null}= {
+  const tx: SetScriptTransaction & WithId & WithProofs & { feeAssetId: string | null } = {
     type,
     version,
     senderPublicKey: publicKey,
@@ -152,30 +172,38 @@ export async function sendSetScript(params: ISetScriptParams): Promise<any> {
 }
 
 export async function broadcastTx(tx: any, nodeUrl: string): Promise<any> {
-  return await broadcast(tx, nodeUrl)
-    .then(result => {
-      console.log((clc.green(`Transaction is successful: ${getTxUrl(result.id)}`)));
-      console.log()
-      return result
-    })
-    .catch((e) => {
-      console.log(clc.red(`Transaction is failed:`), e.message)
-      console.log()
-    })
+  const spinner = new CLI.Spinner('Sending transaction', spinnerStyle);
+  try {
+    const result = await broadcast(tx, nodeUrl);
+    console.log('Sending transaction', result.id);
+    spinner.start();
+    const waitResult = await waitForTx(result.id, {apiBase: nodeUrl});
+    spinner.stop();
+    console.log(clc.green(`Transaction is successful:`), result.id);
+    console.log()
+    if (waitResult.applicationStatus !== 'succeeded') {
+      console.log(clc.red(`Transaction is failed:`, result.id))
+    }
+    return waitResult;
+  } catch (e) {
+    spinner.stop();
+    console.log(clc.red(`Transaction is failed:`), e.message)
+    console.log()
+  }
 }
 
 
-export async function displayArgs(message: string, args: { key: string, value: string }[]): Promise<boolean> {
+export async function displayArgs(message: string, args: { key: string, value: string }[]): Promise<void> {
   console.log()
 
   const maxKeyLength = args.reduce((max, {key}) => Math.max(max, key.length), 0);
-  const maxValueLength = args.reduce((max, {value}) => Math.max(max, value.length), 0);
+  const maxValueLength = args.reduce((max, {value}) => Math.max(max, (value ?? '').toString().length), 0);
   console.log(clc.yellow(message))
 
   for (const {key, value} of args) {
     new CLI.Line()
-      .column(key, maxKeyLength + 4)
-      .column(value, maxValueLength, [clc.cyan]).output();
+      .column((' ').repeat(maxKeyLength - key.length + 2) + key, maxKeyLength + 4,)
+      .column((value ?? '').toString(), maxValueLength, [clc.cyan]).output();
   }
   console.log()
   const {confirm} = await inquirer
@@ -184,16 +212,18 @@ export async function displayArgs(message: string, args: { key: string, value: s
       name: 'confirm',
       message: 'Are you ready to process transaction?'
     }]);
-  return confirm;
+  if (!confirm) {
+    throw EVENT_INTERRUPTED
+  }
 }
 
 export function getTxUrl(txId: string): string {
   switch (Store.node.chainId) {
-    case 84:
+    case CHAIN_ID.TESTNET:
       return `https://new.wavesexplorer.com/transactions/${txId}?network=testnet`
-    case 87:
+    case CHAIN_ID.MAINNET:
       return `https://new.wavesexplorer.com/transactions/${txId}`
-    case 83:
+    case CHAIN_ID.STAGENET:
       return `https://new.wavesexplorer.com/transactions/${txId}?network=stagenet`
     default:
       return txId
@@ -202,11 +232,43 @@ export function getTxUrl(txId: string): string {
 
 export function validateAddress(address: string): boolean | string {
   try {
-    if (base58.decode(address).length !== 26){
+    if (base58.decode(address).length !== 26) {
       return 'Invalid address'
     }
     return true;
   } catch (e) {
     return 'Invalid address'
   }
+}
+
+export function utf8ToBuffer(data: string, length: number): Buffer {
+  return Buffer.concat([Buffer.from(data), Buffer.alloc(length, 0)], length);
+}
+
+export function stringToBlockchainId(data: string): Buffer {
+  return utf8ToBuffer(data, 4);
+}
+
+export function hexToBuffer(data: string, length: number): Buffer {
+  return Buffer.concat(
+    [Buffer.from(data.replace(/^0x/i, ''), 'hex'), Buffer.alloc(length, 0)],
+    length,
+  );
+}
+
+export function tokenSourceAndAddressToWavesSource(
+  tokenSource: string,
+  tokenAddress: string,
+): string {
+  const sourceBuffer = stringToBlockchainId(tokenSource);
+  const lockIdBuffer = hexToBuffer(tokenAddress, 32);
+  return Buffer.concat([sourceBuffer, lockIdBuffer]).toString('base64');
+}
+
+export async function getAssetInfo(assetId: string) {
+  if (!Store.node) {
+    await setNetwork()
+  }
+  const response = await axios.get(`${Store.node.address}/assets/details/${assetId}`)
+  return response.data;
 }
