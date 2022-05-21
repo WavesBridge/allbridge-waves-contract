@@ -1,14 +1,6 @@
 import {setBridgeAddress} from '../settings/settings';
-import {
-  displayArgs,
-  fromInt, getAssetId,
-  getBridgeAssetInfo,
-  getChainAssetInfo, getLockInfo,
-  handleInterrupt, hasUnlockInfo, tokenSourceAndAddressToWavesSource,
-  validateAssetId, validateHex
-} from '../../utils';
+import {displayArgs, handleInterrupt, hasUnlockInfo} from '../../utils';
 import * as inquirer from 'inquirer';
-import {Separator} from 'inquirer';
 
 export async function hasUnlock() {
   try {

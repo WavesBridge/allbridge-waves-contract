@@ -1,14 +1,5 @@
-import {setBridgeAddress, setValidatorAddress} from '../settings/settings';
-import {
-  displayArgs,
-  fromInt, getAssetId,
-  getBridgeAssetInfo,
-  getChainAssetInfo, getLockInfo, getRawBridgeInfo, getRawValidatorInfo,
-  handleInterrupt, tokenSourceAndAddressToWavesSource,
-  validateAssetId, validateHex
-} from '../../utils';
-import * as inquirer from 'inquirer';
-import {Separator} from 'inquirer';
+import {setValidatorAddress} from '../settings/settings';
+import {displayArgs, getRawValidatorInfo, handleInterrupt} from '../../utils';
 
 export async function getValidatorInfo() {
   try {

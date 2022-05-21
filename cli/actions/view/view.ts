@@ -1,7 +1,6 @@
 import * as inquirer from 'inquirer';
 import {Separator} from 'inquirer';
 import {getAssetInfo} from './get-asset-info';
-import {getLockInfo} from '../../utils';
 import {getLock} from './get-lock';
 import {hasUnlock} from './has-unlock';
 import {getBridgeInfo} from './get-bridge-info';

@@ -1,11 +1,14 @@
 import {setBridgeAddress} from '../settings/settings';
 import {
   displayArgs,
-  fromInt, getAssetId,
+  fromInt,
+  getAssetId,
   getBridgeAssetInfo,
   getChainAssetInfo,
-  handleInterrupt, tokenSourceAndAddressToWavesSource,
-  validateAssetId, validateHex
+  handleInterrupt,
+  tokenSourceAndAddressToWavesSource,
+  validateAssetId,
+  validateHex
 } from '../../utils';
 import * as inquirer from 'inquirer';
 import {Separator} from 'inquirer';
@@ -37,9 +40,9 @@ export async function getAssetInfo() {
     case GET_ASSET_TYPE.ASSET_ID:
       return getByAssetId()
     case GET_ASSET_TYPE.SOURCE:
-      return
+      return getBySource()
     case GET_ASSET_TYPE.WAVES_SOURCE:
-      return
+      return getByWavesSource()
     default:
       return
   }

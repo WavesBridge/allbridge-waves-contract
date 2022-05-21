@@ -7,7 +7,9 @@ import {
   displayArgs,
   getCurrentUser,
   handleInterrupt,
-  tokenSourceAndAddressToWavesSource, validateAddress, validateHex
+  tokenSourceAndAddressToWavesSource,
+  validateAddress,
+  validateHex
 } from '../../utils';
 import {setBridgeAddress} from '../settings/settings';
 

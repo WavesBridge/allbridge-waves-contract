@@ -4,7 +4,8 @@ import {
   displayArgs,
   getCurrentUser,
   handleInterrupt,
-  sendInvokeScript, validateAssetId
+  sendInvokeScript,
+  validateAssetId
 } from '../../utils';
 import * as inquirer from 'inquirer';
 import {Store} from '../../store';
