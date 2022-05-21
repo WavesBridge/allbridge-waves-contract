@@ -31,6 +31,6 @@
     "build": "tsc"
   },
   "bin": {
-    "waves-bridge": "index.js"
+    "waves-bridge": "dist/index.js"
   }
 }

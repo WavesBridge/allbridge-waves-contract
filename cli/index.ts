@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 
 import inquirer, {Separator} from 'inquirer';
 import InterruptedPrompt from 'inquirer-interrupted-prompt';
