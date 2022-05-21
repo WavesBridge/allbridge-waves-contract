@@ -1,5 +1,7 @@
 import clear from 'clear';
 import {Store} from './store';
+import CLI from 'clui';
+import clc from 'cli-color';
 
 const Reset = "\x1b[0m"
 const Bright = "\x1b[1m"
@@ -9,7 +11,7 @@ const FgBlue = "\x1b[34m"
 const FgWhite = "\x1b[97m";
 
 export const logo =
-`${Bright}${FgBlue}            []                                       []
+  `${Bright}${FgBlue}            []                                       []
           .:[]:_                                   ,:[]:.
         .: :[]: :-.                             ,-: :[]: :.
       .: : :[]: : :\`._                       ,.': : :[]: : :.
@@ -17,7 +19,7 @@ export const logo =
 _..: : : : :[]: : : : : : :-._________.-: : : : : : :[]: : : : :-._
 _:_:_:_:_:_:[]:_:_:_:_:_:_:_:_:_:_:_:_:_:_:_:_:_:_:_:[]:_:_:_:_:_:_
 !!!!!!!!!!!![]!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!![]!!!!!!!!!!!!!
-${Reset+FgYellow}^^^^^^^^^^^^[]^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[]^^^^^^^^^^^^^
+${Reset + FgYellow}^^^^^^^^^^^^[]^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[]^^^^^^^^^^^^^
             []   ${FgWhite} _       _____ _    _____________${FgYellow}   []
             []   ${FgWhite}| |     / /   | |  / / ____/ ___/${FgYellow}   []
             []   ${FgWhite}| | /| / / /| | | / / __/  \\__ \\${FgYellow}    []
@@ -28,10 +30,6 @@ ${Reset+FgYellow}^^^^^^^^^^^^[]^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[]^^^^^^^^
 
 
 export function printLogo() {
-
-  const CLI = require('clui'),
-    clc = require('cli-color');
-
   const Line = CLI.Line,
     LineBuffer = CLI.LineBuffer;
 
@@ -47,18 +45,20 @@ export function printLogo() {
     .fill()
     .store();
 
-  new Line(outputBuffer)
-    .column('Bridge address:', 20, [clc.cyan])
-    .column(Store.bridgeAddress, undefined, [clc.white])
-    .fill()
-    .store();
-
-  new Line(outputBuffer)
-    .column('Validator address:', 20, [clc.cyan])
-    .column(Store.validatorAddress || '', undefined, [clc.white])
-    .fill()
-    .store();
-
+  if (Store.bridgeAddress) {
+    new Line(outputBuffer)
+      .column('Bridge address:', 20, [clc.cyan])
+      .column(Store.bridgeAddress, undefined, [clc.white])
+      .fill()
+      .store();
+  }
+  if (Store.validatorAddress) {
+    new Line(outputBuffer)
+      .column('Validator address:', 20, [clc.cyan])
+      .column(Store.validatorAddress || '', undefined, [clc.white])
+      .fill()
+      .store();
+  }
   new Line(outputBuffer)
     .fill()
     .store();

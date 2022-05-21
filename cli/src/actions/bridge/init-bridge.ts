@@ -8,17 +8,14 @@ import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {Store} from '../../store';
 import * as inquirer from 'inquirer';
 import {setBridgeAddress, setValidatorAddress} from '../settings/settings';
-import {sendInvokeScript} from '../../utils/send-utils';
-import {validateAssetId} from '../../utils/validators';
+import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
+import {validateAddress, validateAssetId} from '../../utils/validators';
 
 export async function initBridge() {
   try {
-    if (!Store.bridgeAddress) {
-      await setBridgeAddress()
-    }
-    if (!Store.validatorAddress) {
-      await setValidatorAddress()
-    }
+    await setBridgeAddress(true)
+    await setValidatorAddress(true)
+    const user = await getCurrentUser();
     const {
       bridgeManager,
       feeCollector,
@@ -30,19 +27,19 @@ export async function initBridge() {
           type: 'input',
           name: 'bridgeManager',
           message: 'Bridge manager address',
-          validate: validateAssetId
+          validate: validateAddress
         },
         {
           type: 'input',
           name: 'feeCollector',
           message: 'Fee collector address',
-          validate: validateAssetId
+          validate: validateAddress
         },
         {
           type: 'input',
           name: 'unlockSigner',
           message: 'Unlock signer address',
-          validate: validateAssetId
+          validate: validateAddress
         },
         {
           type: 'number',
@@ -60,6 +57,7 @@ export async function initBridge() {
       {key: "Fee collector address", value: feeCollector},
       {key: "Unlock signer precision", value: unlockSigner},
       {key: "Base fee rate", value: `${baseFeeRate}% (${baseFeeRateBp})`},
+      {key: "Signer", value: user.address},
     ])
 
     const params: IInvokeScriptParams = {

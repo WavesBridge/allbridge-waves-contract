@@ -31,7 +31,7 @@ export async function addAsset() {
         name: 'tokenType',
         message: 'Select token type',
         choices: [
-          {name: 'Wrapped', value: TOKEN_TYPE.BASE},
+          {name: 'Wrapped', value: TOKEN_TYPE.WRAPPED},
           {name: `Native ${clc.white('(or previously deployed wrapped)')}`, value: TOKEN_TYPE.NATIVE},
           {name: 'Base', value: TOKEN_TYPE.BASE},
           {name: '..', value: TOKEN_TYPE.EXIT},
@@ -55,9 +55,8 @@ export async function addAsset() {
 export async function addWrappedAsset() {
   try {
     const signer = await getCurrentUser();
-    if (!Store.bridgeAddress) {
-      await setBridgeAddress()
-    }
+    await setBridgeAddress(true)
+
     const {tokenName, tokenDescription, precision} = await inquirer
       .prompt([
         {

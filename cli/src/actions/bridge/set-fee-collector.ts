@@ -9,7 +9,7 @@ import {Store} from '../../store';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {setBridgeAddress} from '../settings/settings';
 import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
-import {validateAssetId} from '../../utils/validators';
+import {validateAddress, validateAssetId} from '../../utils/validators';
 
 export async function setFeeCollector() {
   try {
@@ -25,7 +25,7 @@ export async function setFeeCollector() {
           type: 'input',
           name: 'feeCollector',
           message: 'Fee collector address',
-          validate: validateAssetId
+          validate: validateAddress
         }
       ]);
 

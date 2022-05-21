@@ -9,6 +9,7 @@ import {
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
 import {validateAddress} from '../../utils/validators';
+import {Separator} from 'inquirer';
 
 export async function setManager() {
   try {
@@ -22,7 +23,7 @@ export async function setManager() {
           choices: [{name: 'Bridge manager', value: 'BRIDGE_MANAGER'}, {
             name: 'Asset manager',
             value: 'ASSET_MANAGER'
-          }, {name: 'Stop manager', value: 'STOP_MANAGER'}]
+          }, {name: 'Stop manager', value: 'STOP_MANAGER'}, new Separator()]
         },
         {
           type: 'input',

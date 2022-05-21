@@ -1,11 +1,12 @@
 import {chainIdToName, displayArgs, handleInterrupt} from '../../utils/utils';
 import {Store} from '../../store';
 import {getCurrentUser, sendSetScript} from '../../utils/send-utils';
+import path from 'path';
 
 const ride = require('@waves/ride-js')
 const fs = require('fs');
 
-const code = fs.readFileSync('../ride/bridge.ride', 'utf8');
+const code = fs.readFileSync(path.resolve(__dirname, '../../../../ride/bridge.ride'), 'utf8');
 const data = ride.compile(code).result.base64;
 
 export async function deployBridge() {

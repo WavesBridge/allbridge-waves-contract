@@ -1,5 +1,4 @@
 import * as inquirer from 'inquirer';
-import {broadcast, invokeScript} from '@waves/waves-transactions';
 import {Store} from '../../store';
 import {
   base58ToBase64,
@@ -9,8 +8,9 @@ import {
   tokenSourceAndAddressToWavesSource,
 } from '../../utils/utils';
 import {setBridgeAddress} from '../settings/settings';
-import {getCurrentUser} from '../../utils/send-utils';
+import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
 import {validateAddress, validateHex} from '../../utils/validators';
+import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 
 export async function removeAsset() {
   try {
@@ -46,13 +46,13 @@ export async function removeAsset() {
       {key: "Node", value: `${Store.node.address} (${chainIdToName(Store.node.chainId)})`},
       {key: "Bridge", value: Store.bridgeAddress},
       {key: "Token source", value: tokenSource},
-      {key: "Token description", value: tokenSourceAddress},
+      {key: "Token source address", value: tokenSourceAddress},
       {key: "Token source and address", value: assetSourceAndAddress},
       {key: "Signer", value: signer.address},
     ])
 
 
-    const signedTx = invokeScript({
+    const params: IInvokeScriptParams = {
       dApp: Store.bridgeAddress,
       call: {
         function: 'removeAsset',
@@ -61,10 +61,8 @@ export async function removeAsset() {
           {type: 'binary', value: base58ToBase64(newOwner)},
         ]
       },
-      chainId: Store.node.chainId
-    }, Store.seed);
-    const result = await broadcast(signedTx, Store.node.address).catch(console.error)
-    console.log(result);
+    };
+    await sendInvokeScript(params)
 
   } catch (e) {
     handleInterrupt(e)
