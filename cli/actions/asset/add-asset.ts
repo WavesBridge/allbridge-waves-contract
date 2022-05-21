@@ -5,7 +5,7 @@ import {
   base58ToBase64,
   chainIdToName,
   displayArgs,
-  getAssetInfo,
+  getChainAssetInfo,
   getCurrentUser,
   handleInterrupt,
   sendInvokeScript,
@@ -147,7 +147,7 @@ export async function addNativeAsset(assetIdArg?: string) {
         }
       ]);
 
-    const assetInfo = await getAssetInfo(assetId);
+    const assetInfo = await getChainAssetInfo(assetId);
 
     const assetSourceAndAddress = tokenSourceAndAddressToWavesSource(tokenSource, tokenSourceAddress)
     const minFeeInt = Math.floor(minFeeFloat * Math.pow(10, assetInfo.decimals));

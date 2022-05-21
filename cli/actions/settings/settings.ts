@@ -37,7 +37,10 @@ export async function settings() {
   }
 }
 
-export async function setBridgeAddress() {
+export async function setBridgeAddress(fast = false) {
+  if (fast && Store.bridgeAddress) {
+    return
+  }
   try {
     const {bridgeAddress} = await inquirer
       .prompt([
@@ -56,7 +59,10 @@ export async function setBridgeAddress() {
   }
 }
 
-export async function setValidatorAddress() {
+export async function setValidatorAddress(fast = false) {
+  if (fast && Store.validatorAddress) {
+    return
+  }
   try {
     const {validatorAddress} = await inquirer
       .prompt([
@@ -75,7 +81,10 @@ export async function setValidatorAddress() {
   }
 }
 
-export async function setNetwork() {
+export async function setNetwork(fast = false) {
+  if (fast && Store.node) {
+    return
+  }
   const {node} = await inquirer
     .prompt([
       {

@@ -4,7 +4,7 @@ import {
   displayArgs,
   handleInterrupt,
   hexToBase64,
-  sendInvokeScript,
+  sendInvokeScript, validateAddress,
   validateAssetId, validateHex
 } from '../../utils';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
@@ -30,7 +30,7 @@ export async function initValidator() {
           type: 'input',
           name: 'adminAddress',
           message: 'Validator admin address',
-          validate: validateAssetId
+          validate: validateAddress
         },
         {
           type: 'input',
@@ -46,7 +46,7 @@ export async function initValidator() {
         }
       ]);
 
-    await displayArgs('You are going to init bridge', [
+    await displayArgs('You are going to init validator', [
       {key: "Node", value: `${Store.node.address} (${chainIdToName(Store.node.chainId)})`},
       {key: "Bridge", value: Store.bridgeAddress},
       {key: "Validator", value: Store.validatorAddress},

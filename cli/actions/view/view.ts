@@ -1,5 +1,11 @@
 import * as inquirer from 'inquirer';
 import {Separator} from 'inquirer';
+import {getAssetInfo} from './get-asset-info';
+import {getLockInfo} from '../../utils';
+import {getLock} from './get-lock';
+import {hasUnlock} from './has-unlock';
+import {getBridgeInfo} from './get-bridge-info';
+import {getValidatorInfo} from './get-validator-info';
 
 enum VIEW_ACTION {
   ASSET,
@@ -29,6 +35,16 @@ export async function view() {
     ]).catch(() => ({action: '..'}));
 
   switch (viewAction) {
+    case VIEW_ACTION.ASSET:
+      return getAssetInfo()
+    case VIEW_ACTION.LOCK:
+      return getLock()
+    case VIEW_ACTION.UNLOCK:
+      return hasUnlock()
+    case VIEW_ACTION.BRIDGE:
+      return getBridgeInfo()
+    case VIEW_ACTION.VALIDATOR:
+      return getValidatorInfo()
     default:
       return
   }

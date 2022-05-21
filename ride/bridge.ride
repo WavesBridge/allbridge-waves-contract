@@ -38,7 +38,7 @@ let errNotOnePayment = "not one payment"
 let errAssetNotFound = "asset not found"
 let errNotEnoughBalance = "not enough balance"
 let errBigPowValue = "pow value too big"
-let errBridgeDisabled = "birdge is disabled"
+let errBridgeDisabled = "bridge is disabled"
 let errAssetDisabled = "asset is disabled"
 let errWrongDestinationChain = "wrong destination chain"
 

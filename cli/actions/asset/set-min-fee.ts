@@ -2,7 +2,7 @@ import {
   base58ToBase64,
   chainIdToName,
   displayArgs,
-  getAssetInfo,
+  getChainAssetInfo,
   getCurrentUser,
   handleInterrupt,
   sendInvokeScript,
@@ -35,7 +35,7 @@ export async function setMinFee() {
           message: 'Min fee (float)',
         },
       ]);
-    const assetInfo = await getAssetInfo(assetId);
+    const assetInfo = await getChainAssetInfo(assetId);
     const minFeeInt = toInt(minFeeFloat, assetInfo.decimals);
 
     await displayArgs('You are going to set asset min fee', [

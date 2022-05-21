@@ -2,7 +2,7 @@ import {
   base58ToBase64,
   chainIdToName,
   displayArgs,
-  getAssetInfo,
+  getChainAssetInfo,
   getCurrentUser,
   handleInterrupt,
   sendInvokeScript, validateAssetId
@@ -37,7 +37,7 @@ export async function setAssetState() {
             {name: 'Disable', value: false}]
         },
       ]);
-    const assetInfo = await getAssetInfo(assetId);
+    const assetInfo = await getChainAssetInfo(assetId);
 
     await displayArgs('You are going to set asset state', [
       {key: "Node", value: `${Store.node.address} (${chainIdToName(Store.node.chainId)})`},
