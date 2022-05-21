@@ -1,5 +1,6 @@
 import {setValidatorAddress} from '../settings/settings';
-import {displayArgs, getRawValidatorInfo, handleInterrupt} from '../../utils';
+import {displayArgs, handleInterrupt} from '../../utils/utils';
+import {getRawValidatorInfo} from '../../utils/blockchain-utils';
 
 export async function getValidatorInfo() {
   try {

@@ -2,13 +2,12 @@ import {
   base58ToBase64,
   chainIdToName,
   displayArgs,
-  getCurrentUser,
   handleInterrupt,
-  sendInvokeScript
-} from '../../utils';
+} from '../../utils/utils';
 import {Store} from '../../store';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {setBridgeAddress, setValidatorAddress} from '../settings/settings';
+import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
 
 export async function setValidatorBridge() {
   try {

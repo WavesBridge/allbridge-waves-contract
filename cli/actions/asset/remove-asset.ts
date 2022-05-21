@@ -5,13 +5,12 @@ import {
   base58ToBase64,
   chainIdToName,
   displayArgs,
-  getCurrentUser,
   handleInterrupt,
   tokenSourceAndAddressToWavesSource,
-  validateAddress,
-  validateHex
-} from '../../utils';
+} from '../../utils/utils';
 import {setBridgeAddress} from '../settings/settings';
+import {getCurrentUser} from '../../utils/send-utils';
+import {validateAddress, validateHex} from '../../utils/validators';
 
 export async function removeAsset() {
   try {

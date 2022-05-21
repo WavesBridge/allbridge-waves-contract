@@ -1,9 +1,9 @@
 import * as inquirer from 'inquirer';
 import {Store} from '../../store';
-import {chainIdToName, getLedger, handleInterrupt, spinnerStyle} from '../../utils';
+import {chainIdToName, handleInterrupt} from '../../utils/utils';
 import clc from 'cli-color';
 import {setNetwork} from '../settings/settings';
-import {Spinner} from 'clui';
+import {getLedgerUser} from '../../utils/ledger-utils';
 
 export async function authLedger() {
   if (!Store.node) {
@@ -20,19 +20,13 @@ export async function authLedger() {
         }
       ]);
 
-    const ledger = getLedger(Store.node.chainId)
-
-    const spinner = new Spinner('Please, connect your Ledger Device and enter to the Waves application', spinnerStyle);
     try {
-      spinner.start();
-      const account = await ledger.getUserDataById(accountIndex);
-      spinner.stop();
-      console.log(`Selected account id: ${account.address} (${chainIdToName(Store.node.chainId)})`)
+      const account = await getLedgerUser(accountIndex);
+      console.log(`Selected account is: ${clc.green(account.address)} (${chainIdToName(Store.node.chainId)})`)
       Store.ledgerUserId = accountIndex;
       Store.useLedger = true;
     } catch (e) {
-      spinner.stop();
-      console.log(clc.red('Connection timeout. Please, connect your Ledger Device and enter to the Waves application\n'));
+      console.log(clc.red('Cannot auth\n'));
     }
   } catch (e) {
     handleInterrupt(e)

@@ -1,5 +1,6 @@
 import {setBridgeAddress} from '../settings/settings';
-import {displayArgs, getRawBridgeInfo, handleInterrupt} from '../../utils';
+import {displayArgs, handleInterrupt} from '../../utils/utils';
+import {getRawBridgeInfo} from '../../utils/blockchain-utils';
 
 export async function getBridgeInfo() {
   try {

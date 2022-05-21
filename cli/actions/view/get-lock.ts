@@ -1,13 +1,10 @@
 import {setBridgeAddress} from '../settings/settings';
 import {
   displayArgs,
-  getAssetId,
-  getBridgeAssetInfo,
-  getChainAssetInfo,
-  getLockInfo,
   handleInterrupt
-} from '../../utils';
+} from '../../utils/utils';
 import * as inquirer from 'inquirer';
+import {getAssetId, getBridgeAssetInfo, getChainAssetInfo, getLockInfo} from '../../utils/blockchain-utils';
 
 export async function getLock() {
   try {

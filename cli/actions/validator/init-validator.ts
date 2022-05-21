@@ -4,14 +4,13 @@ import {
   displayArgs,
   handleInterrupt,
   hexToBase64,
-  sendInvokeScript,
-  validateAddress,
-  validateHex
-} from '../../utils';
+} from '../../utils/utils';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {Store} from '../../store';
 import * as inquirer from 'inquirer';
 import {setBridgeAddress, setValidatorAddress} from '../settings/settings';
+import {sendInvokeScript} from '../../utils/send-utils';
+import {validateAddress, validateHex} from '../../utils/validators';
 
 export async function initValidator() {
   try {

@@ -1,6 +1,7 @@
 import inquirer, {Separator} from 'inquirer';
-import {CHAIN_ID, handleInterrupt, validateAddress} from '../../utils';
+import {CHAIN_ID, handleInterrupt} from '../../utils/utils';
 import {Store} from '../../store';
+import {validateAddress} from '../../utils/validators';
 
 enum SETTINGS_ACTION {
   BRIDGE,

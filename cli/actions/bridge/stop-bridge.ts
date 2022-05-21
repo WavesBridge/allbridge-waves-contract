@@ -1,7 +1,8 @@
-import {chainIdToName, displayArgs, getCurrentUser, handleInterrupt, sendInvokeScript} from '../../utils';
+import {chainIdToName, displayArgs, handleInterrupt} from '../../utils/utils';
 import {Store} from '../../store';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {setBridgeAddress} from '../settings/settings';
+import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
 
 export async function stopBridge() {
   try {

@@ -4,12 +4,11 @@ import {
   base58ToBase64,
   chainIdToName,
   displayArgs,
-  getCurrentUser,
-  handleInterrupt,
-  sendInvokeScript,
-  validateAddress
-} from '../../utils';
+  handleInterrupt
+} from '../../utils/utils';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
+import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
+import {validateAddress} from '../../utils/validators';
 
 export async function setManager() {
   try {

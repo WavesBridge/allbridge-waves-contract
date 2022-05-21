@@ -2,7 +2,7 @@ import * as inquirer from 'inquirer';
 import {Separator} from 'inquirer';
 import {addAsset} from './add-asset';
 import {removeAsset} from './remove-asset';
-import {handleInterrupt} from '../../utils';
+import {handleInterrupt} from '../../utils/utils';
 import {setMinFee} from './set-min-fee';
 import {setBaseFeeRate} from './set-base-fee-rate';
 import {setAssetState} from './set-asset-state';

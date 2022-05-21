@@ -5,17 +5,16 @@ import {
   base58ToBase64,
   chainIdToName,
   displayArgs,
-  getChainAssetInfo,
-  getCurrentUser,
   handleInterrupt,
-  sendInvokeScript,
   toInt,
   tokenSourceAndAddressToWavesSource
-} from '../../utils';
+} from '../../utils/utils';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import clc from 'cli-color';
 import {setupAssets} from './setup-assets';
 import {setBridgeAddress} from '../settings/settings';
+import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
+import {getChainAssetInfo} from '../../utils/blockchain-utils';
 
 enum TOKEN_TYPE {
   BASE,

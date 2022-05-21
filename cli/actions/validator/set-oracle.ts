@@ -1,16 +1,15 @@
 import {
   chainIdToName,
   displayArgs,
-  getCurrentUser,
   handleInterrupt,
   hexToBase64,
-  sendInvokeScript,
-  validateHex
-} from '../../utils';
+} from '../../utils/utils';
 import {Store} from '../../store';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {setValidatorAddress} from '../settings/settings';
 import * as inquirer from 'inquirer';
+import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
+import {validateHex} from '../../utils/validators';
 
 export async function setOracle() {
   try {

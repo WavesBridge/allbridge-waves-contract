@@ -1,7 +1,7 @@
 import inquirer, {Separator} from 'inquirer';
 import {deployBridge} from './deploy-bridge';
 import {deployValidator} from './deploy-validator';
-import {handleInterrupt} from '../../utils';
+import {handleInterrupt} from '../../utils/utils';
 
 enum DEPLOY_ACTION {
   BRIDGE,

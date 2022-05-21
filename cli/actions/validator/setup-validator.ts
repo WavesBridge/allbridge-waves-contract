@@ -4,7 +4,7 @@ import {initValidator} from './init-validator';
 import {setAdmin} from './set-admin';
 import {setOracle} from './set-oracle';
 import {setValidatorBridge} from './set-bridge';
-import {handleInterrupt} from '../../utils';
+import {handleInterrupt} from '../../utils/utils';
 
 enum VALIDATOR_ACTION {
   INIT,

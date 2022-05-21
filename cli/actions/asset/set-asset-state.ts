@@ -2,16 +2,15 @@ import {
   base58ToBase64,
   chainIdToName,
   displayArgs,
-  getChainAssetInfo,
-  getCurrentUser,
   handleInterrupt,
-  sendInvokeScript,
-  validateAssetId
-} from '../../utils';
+} from '../../utils/utils';
 import * as inquirer from 'inquirer';
 import {Store} from '../../store';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {setBridgeAddress} from '../settings/settings';
+import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
+import {validateAssetId} from '../../utils/validators';
+import {getChainAssetInfo} from '../../utils/blockchain-utils';
 
 export async function setAssetState() {
   try {

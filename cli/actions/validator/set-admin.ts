@@ -2,14 +2,13 @@ import {
   base58ToBase64,
   chainIdToName,
   displayArgs,
-  getCurrentUser,
   handleInterrupt,
-  sendInvokeScript
-} from '../../utils';
+} from '../../utils/utils';
 import {Store} from '../../store';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {setValidatorAddress} from '../settings/settings';
 import * as inquirer from 'inquirer';
+import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
 
 export async function setAdmin() {
   try {

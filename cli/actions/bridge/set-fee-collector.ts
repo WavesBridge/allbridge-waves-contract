@@ -2,15 +2,14 @@ import {
   base58ToBase64,
   chainIdToName,
   displayArgs,
-  getCurrentUser,
   handleInterrupt,
-  sendInvokeScript,
-  validateAssetId
-} from '../../utils';
+} from '../../utils/utils';
 import * as inquirer from 'inquirer';
 import {Store} from '../../store';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {setBridgeAddress} from '../settings/settings';
+import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
+import {validateAssetId} from '../../utils/validators';
 
 export async function setFeeCollector() {
   try {

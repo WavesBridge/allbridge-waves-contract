@@ -1,5 +1,6 @@
-import {chainIdToName, displayArgs, getCurrentUser, handleInterrupt, sendSetScript} from '../../utils';
+import {chainIdToName, displayArgs, handleInterrupt} from '../../utils/utils';
 import {Store} from '../../store';
+import {getCurrentUser, sendSetScript} from '../../utils/send-utils';
 
 const ride = require('@waves/ride-js')
 const fs = require('fs');

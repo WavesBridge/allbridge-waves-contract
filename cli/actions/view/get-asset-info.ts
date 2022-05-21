@@ -2,16 +2,13 @@ import {setBridgeAddress} from '../settings/settings';
 import {
   displayArgs,
   fromInt,
-  getAssetId,
-  getBridgeAssetInfo,
-  getChainAssetInfo,
   handleInterrupt,
   tokenSourceAndAddressToWavesSource,
-  validateAssetId,
-  validateHex
-} from '../../utils';
+} from '../../utils/utils';
 import * as inquirer from 'inquirer';
 import {Separator} from 'inquirer';
+import {validateAssetId, validateHex} from '../../utils/validators';
+import {getAssetId, getBridgeAssetInfo, getChainAssetInfo} from '../../utils/blockchain-utils';
 
 enum GET_ASSET_TYPE {
   ASSET_ID,
