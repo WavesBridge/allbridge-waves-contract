@@ -16,7 +16,7 @@ export enum CHAIN_ID {
 export const EVENT_INTERRUPTED = 'EVENT_INTERRUPTED';
 export function handleInterrupt(e) {
   if (e === EVENT_INTERRUPTED) {
-    console.log()
+    console.log('\n')
     return {}
   } else {
     throw e

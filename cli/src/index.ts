@@ -12,9 +12,12 @@ import {setupBridge} from './actions/bridge/setup-bridge';
 import {setupValidator} from './actions/validator/setup-validator';
 import {view} from './actions/view/view';
 import {printLogo} from './logo';
+import {IntrList} from './utils/interrupted-list';
 
 InterruptedPrompt.replaceAllDefaults(inquirer);
 inquirer.registerPrompt('file-tree-selection', FileTreeSelectionPrompt)
+inquirer.registerPrompt('list', IntrList);
+
 
 enum START_ACTION {
     AUTH,
@@ -24,11 +27,11 @@ enum START_ACTION {
     DEPLOY,
     VIEW,
     SETTINGS,
-    EXIT
+    EXIT= '..'
 }
 async function start() {
     try {
-        const {action} = await inquirer
+        const prompt = inquirer
           .prompt([
               {
                   type: 'list',
@@ -46,7 +49,9 @@ async function start() {
                       new Separator()],
                   pageSize: 9
               }
-          ]).catch(() => ({action: START_ACTION.EXIT}));
+          ]);
+
+        const {action} = await prompt.catch(() => ({action: START_ACTION.EXIT}));
 
         switch (action) {
             case START_ACTION.AUTH:
@@ -71,6 +76,7 @@ async function start() {
                 await settings()
                 break
             case START_ACTION.EXIT:
+                process.exit()
                 return
         }
 
@@ -78,6 +84,7 @@ async function start() {
     } catch (e) {
         return start();
     }
+
 }
 printLogo()
 start()

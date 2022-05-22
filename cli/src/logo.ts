@@ -59,6 +59,21 @@ export function printLogo() {
       .fill()
       .store();
   }
+
+  if (Store.useLedger === true) {
+    new Line(outputBuffer)
+      .column('Auth:', 20, [clc.cyan])
+      .column(`Ledger (${Store.ledgerUserId})`, undefined, [clc.white])
+      .fill()
+      .store();
+  } else if (Store.keyFileAddress) {
+    new Line(outputBuffer)
+      .column('Auth:', 20, [clc.cyan])
+      .column(`Key file (${Store.keyFileAddress})`, undefined, [clc.white])
+      .fill()
+      .store();
+  }
+
   new Line(outputBuffer)
     .fill()
     .store();

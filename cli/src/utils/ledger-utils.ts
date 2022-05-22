@@ -17,13 +17,11 @@ export async function getLedger(chainId: number): Promise<Waves> {
   const spinner = new CLI.Spinner('Please, connect your Ledger Device and enter to the Waves application', spinnerStyle);
   try {
     spinner.start();
-    await closeTransport();
     transport = await TransportNodeHid.create();
     spinner.stop();
     return new Waves(transport, chainId)
   } catch (e) {
     spinner.stop();
-    await closeTransport();
     console.log(clc.red('Connection timeout. Please, connect your Ledger Device and enter to the Waves application'));
     throw e
   }
@@ -33,11 +31,8 @@ export async function getLedgerUser(accountId: number) {
   await setNetwork(true);
   try {
     const ledger = await getLedger(Store.node.chainId);
-    const result = await ledger.getWalletPublicKey(getPathById(accountId));
-    await closeTransport();
-    return result
+    return await ledger.getWalletPublicKey(getPathById(accountId));
   } catch (e) {
-    await closeTransport();
     console.log(clc.red('Please, unlock your Ledger Device, enter to the Waves application and try again'));
     throw e;
   }
@@ -49,19 +44,10 @@ export async function ledgerSign(data: Uint8Array, chainId: CHAIN_ID, userId: nu
   spinner.start();
   try {
     const signature = await ledger.signSomeData(getPathById(userId), {dataBuffer: data})
-    await closeTransport();
     spinner.stop();
     return signature;
   } catch (e) {
-    await closeTransport();
     spinner.stop();
     console.log('Transaction was rejected')
-  }
-}
-
-async function closeTransport() {
-  if (transport) {
-    await transport.close();
-    transport = undefined;
   }
 }

@@ -9,6 +9,12 @@ enum SETTINGS_ACTION {
   NETWORK
 }
 
+const NODE = {
+  [CHAIN_ID.MAINNET]: 'https://nodes.wavesnodes.com',
+  [CHAIN_ID.TESTNET]: 'https://nodes-testnet.wavesnodes.com',
+  [CHAIN_ID.STAGENET]: 'https://nodes-stagenet.wavesnodes.com'
+}
+
 export async function settings() {
   const {action} = await inquirer
     .prompt([
@@ -93,10 +99,10 @@ export async function setNetwork(fast = false) {
         name: 'node',
         message: 'Select a network',
         choices: [
-          {name: 'Mainnet', value: {address: 'https://nodes.wavesnodes.com', chainId: CHAIN_ID.MAINNET}},
-          {name: 'Testnet', value: {address: 'https://nodes-testnet.wavesnodes.com', chainId: CHAIN_ID.TESTNET}},
-          {name: 'Stagenet', value: {address: 'https://nodes-stagenet.wavesnodes.com', chainId: CHAIN_ID.STAGENET}},
-          {name: '..', value: ''},
+          {name: `Mainnet (${NODE[CHAIN_ID.MAINNET]})`, value: {address: NODE[CHAIN_ID.MAINNET], chainId: CHAIN_ID.MAINNET}},
+          {name: `Testnet (${NODE[CHAIN_ID.TESTNET]})`, value: {address: NODE[CHAIN_ID.TESTNET], chainId: CHAIN_ID.TESTNET}},
+          {name: `Stagenet (${NODE[CHAIN_ID.STAGENET]})`, value: {address: NODE[CHAIN_ID.STAGENET], chainId: CHAIN_ID.STAGENET}},
+          {name: '..', value: '..'},
           new Separator()
         ]
       }
