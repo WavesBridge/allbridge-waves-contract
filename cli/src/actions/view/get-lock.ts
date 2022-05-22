@@ -5,6 +5,7 @@ import {
 } from '../../utils/utils';
 import * as inquirer from 'inquirer';
 import {getAssetId, getBridgeAssetInfo, getChainAssetInfo, getLockInfo} from '../../utils/blockchain-utils';
+import {validateLockId} from '../../utils/validators';
 
 export async function getLock() {
   try {
@@ -17,6 +18,7 @@ export async function getLock() {
           type: 'input',
           name: 'lockId',
           message: 'Lock id',
+          validate: validateLockId
         },
       ]);
 

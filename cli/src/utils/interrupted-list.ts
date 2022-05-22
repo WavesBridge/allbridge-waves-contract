@@ -14,6 +14,8 @@ export class IntrList extends ListPrompt {
             this.render();
             this.screen.done();
             this.done('..');
+          } else {
+            reject('EVENT_INTERRUPTED')
           }
         }
       });

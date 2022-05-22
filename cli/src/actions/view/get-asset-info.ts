@@ -1,14 +1,10 @@
 import {setBridgeAddress} from '../settings/settings';
-import {
-  displayArgs,
-  fromInt,
-  handleInterrupt,
-  tokenSourceAndAddressToWavesSource,
-} from '../../utils/utils';
+import {displayArgs, fromInt, handleInterrupt, tokenSourceAndAddressToWavesSource,} from '../../utils/utils';
 import * as inquirer from 'inquirer';
 import {Separator} from 'inquirer';
-import {validateAssetId, validateHex} from '../../utils/validators';
+import {validateAssetId, validateBlockchainId, validateHex} from '../../utils/validators';
 import {getAssetId, getBridgeAssetInfo, getChainAssetInfo} from '../../utils/blockchain-utils';
+import {LAST_KEY, Store} from '../../store';
 
 enum GET_ASSET_TYPE {
   ASSET_ID,
@@ -53,15 +49,20 @@ async function getBySource() {
           type: 'input',
           name: 'tokenSource',
           message: 'Token source (1 to 4 symbols)',
-          validate: input => 1 <= input.length && input.length <= 4,
+          validate: validateBlockchainId,
+          default: Store.getLastValue(LAST_KEY.ASSET_SOURCE_ADDRESS)
         },
         {
           type: 'input',
           name: 'tokenSourceAddress',
           message: 'Token source address (hex starts with 0x)',
-          validate: validateHex
+          validate: validateHex,
+          default: Store.getLastValue(LAST_KEY.ASSET_SOURCE_ADDRESS)
         }
       ])
+
+    Store.setLastValue(LAST_KEY.ASSET_SOURCE, tokenSource);
+    Store.setLastValue(LAST_KEY.ASSET_SOURCE_ADDRESS, tokenSourceAddress);
 
     const wavesSource = tokenSourceAndAddressToWavesSource(tokenSource, tokenSourceAddress);
     return getByWavesSource(wavesSource);
@@ -78,7 +79,7 @@ async function getByWavesSource(sourceArg?: string) {
       .prompt([
         {
           type: 'input',
-          name: 'assetId',
+          name: 'source',
           message: 'Asset source and address (base64)',
           when: !sourceArg
         },
@@ -103,10 +104,12 @@ async function getByAssetId(assetIdArg?: string) {
           name: 'assetId',
           message: 'Asset id',
           validate: validateAssetId,
-          when: !assetIdArg
+          when: !assetIdArg,
+          default: Store.getLastValue(LAST_KEY.ASSET_ID)
         },
       ]);
 
+    Store.setLastValue(LAST_KEY.ASSET_ID, assetId);
 
     const bridgeAssetInfo = await getBridgeAssetInfo(assetId);
     const chainAssetInfo = await getChainAssetInfo(assetId);

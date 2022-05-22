@@ -2,6 +2,7 @@ import clear from 'clear';
 import {Store} from './store';
 import CLI from 'clui';
 import clc from 'cli-color';
+import {chainIdToName} from './utils/utils';
 
 const Reset = "\x1b[0m"
 const Bright = "\x1b[1m"
@@ -44,6 +45,14 @@ export function printLogo() {
   new Line(outputBuffer)
     .fill()
     .store();
+
+  if (Store.node) {
+    new Line(outputBuffer)
+      .column('Network:', 20, [clc.cyan])
+      .column(`${Store.node.address} (${chainIdToName(Store.node.chainId)})`, undefined, [clc.white])
+      .fill()
+      .store();
+  }
 
   if (Store.bridgeAddress) {
     new Line(outputBuffer)

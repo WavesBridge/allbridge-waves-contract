@@ -6,11 +6,12 @@ import {
   toInt
 } from '../../utils/utils';
 import * as inquirer from 'inquirer';
-import {Store} from '../../store';
+import {LAST_KEY, Store} from '../../store';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {setBridgeAddress} from '../settings/settings';
 import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
 import {getChainAssetInfo} from '../../utils/blockchain-utils';
+import {validateAssetId} from '../../utils/validators';
 
 export async function setMinFee() {
   try {
@@ -27,6 +28,8 @@ export async function setMinFee() {
           type: 'input',
           name: 'assetId',
           message: 'Asset id',
+          validate: validateAssetId,
+          default: Store.getLastValue(LAST_KEY.ASSET_ID)
         },
         {
           type: 'input',
@@ -34,6 +37,7 @@ export async function setMinFee() {
           message: 'Min fee (float)',
         },
       ]);
+    Store.setLastValue(LAST_KEY.ASSET_ID, assetId);
     const assetInfo = await getChainAssetInfo(assetId);
     const minFeeInt = toInt(minFeeFloat, assetInfo.decimals);
 

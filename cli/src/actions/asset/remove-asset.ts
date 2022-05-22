@@ -1,5 +1,5 @@
 import * as inquirer from 'inquirer';
-import {Store} from '../../store';
+import {LAST_KEY, Store} from '../../store';
 import {
   base58ToBase64,
   chainIdToName,
@@ -9,7 +9,7 @@ import {
 } from '../../utils/utils';
 import {setBridgeAddress} from '../settings/settings';
 import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
-import {validateAddress, validateHex} from '../../utils/validators';
+import {validateAddress, validateBlockchainId, validateHex} from '../../utils/validators';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 
 export async function removeAsset() {
@@ -24,13 +24,15 @@ export async function removeAsset() {
           type: 'input',
           name: 'tokenSource',
           message: 'Token source (1 to 4 symbols)',
-          validate: input => 1 <= input.length && input.length <= 4,
+          validate: validateBlockchainId,
+          default: Store.getLastValue(LAST_KEY.ASSET_SOURCE)
         },
         {
           type: 'input',
           name: 'tokenSourceAddress',
           message: 'Token source address (hex starts with 0x)',
-          validate: validateHex
+          validate: validateHex,
+          default: Store.getLastValue(LAST_KEY.ASSET_SOURCE_ADDRESS)
         },
         {
           type: 'input',

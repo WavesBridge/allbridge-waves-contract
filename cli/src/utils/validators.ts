@@ -23,5 +23,17 @@ export function validateAssetId(address: string): boolean | string {
 }
 
 export function validateHex(hex: string): boolean | string {
-  return /^0x[0-9a-f]+$/i.test(hex) || 'Invalid hex';
+  return /^0x[\da-f]+$/i.test(hex) || 'Invalid hex';
+}
+
+export function validateOracle(hex: string): boolean | string {
+  return /^0x[\da-f]{128}$/i.test(hex) || 'Invalid 64 byte hex';
+}
+
+export function validateBlockchainId(blockchainId: string): boolean | string {
+  return /^[a-z\d]{1,4}$/i.test(blockchainId) || 'Invalid blockchain id';
+}
+
+export function validateLockId(lockId: string): boolean | string {
+  return /^\d{37,39}$/i.test(lockId) || 'Invalid lock id';
 }

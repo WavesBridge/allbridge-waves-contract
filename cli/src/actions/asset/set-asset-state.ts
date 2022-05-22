@@ -5,7 +5,7 @@ import {
   handleInterrupt,
 } from '../../utils/utils';
 import * as inquirer from 'inquirer';
-import {Store} from '../../store';
+import {LAST_KEY, Store} from '../../store';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {setBridgeAddress} from '../settings/settings';
 import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
@@ -27,7 +27,8 @@ export async function setAssetState() {
           type: 'input',
           name: 'assetId',
           message: 'Asset id',
-          validate: validateAssetId
+          validate: validateAssetId,
+          default: Store.getLastValue(LAST_KEY.ASSET_ID)
         },
         {
           type: 'list',
@@ -37,6 +38,7 @@ export async function setAssetState() {
             {name: 'Disable', value: false}]
         },
       ]);
+    Store.setLastValue(LAST_KEY.ASSET_ID, assetId);
     const assetInfo = await getChainAssetInfo(assetId);
 
     await displayArgs('You are going to set asset state', [

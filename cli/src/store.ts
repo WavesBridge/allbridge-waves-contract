@@ -9,6 +9,13 @@ enum KEY {
   VALIDATOR_ADDRESS = 'validatorAddress',
   KEY_FILE_ADDRESS = 'keyFileAddress'
 }
+
+export enum LAST_KEY {
+  ASSET_ID = 'assetId',
+  ASSET_SOURCE = 'assetSource',
+  ASSET_SOURCE_ADDRESS = 'assetSourceAddress'
+}
+
 let storedSeed: string | undefined;
 type Node = { address: string, chainId: number };
 
@@ -84,5 +91,13 @@ export class Store {
 
   static get keyFileAddress(): string | undefined {
     return config.get(KEY.KEY_FILE_ADDRESS)
+  }
+
+  static setLastValue(type: LAST_KEY, value: any) {
+    config.set(`last_${type}`, value);
+  }
+
+  static getLastValue(type: LAST_KEY) {
+    return config.get(`last_${type}`);
   }
 }

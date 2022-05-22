@@ -25,8 +25,8 @@ export async function view() {
           {name: 'Get asset info', value: VIEW_ACTION.ASSET},
           {name: 'Get lock info', value: VIEW_ACTION.LOCK},
           {name: 'Has unlock', value: VIEW_ACTION.UNLOCK},
-          {name: 'Get bridge configs', value: VIEW_ACTION.BRIDGE},
-          {name: 'Get validator configs', value: VIEW_ACTION.VALIDATOR},
+          {name: 'Get bridge info', value: VIEW_ACTION.BRIDGE},
+          {name: 'Get validator info', value: VIEW_ACTION.VALIDATOR},
           '..',
           new Separator()
         ]

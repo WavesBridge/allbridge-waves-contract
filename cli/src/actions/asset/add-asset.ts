@@ -1,6 +1,6 @@
 import * as inquirer from 'inquirer';
 import {Separator} from 'inquirer';
-import {Store} from '../../store';
+import {LAST_KEY, Store} from '../../store';
 import {
   base58ToBase64,
   chainIdToName,
@@ -15,6 +15,7 @@ import {setupAssets} from './setup-assets';
 import {setBridgeAddress} from '../settings/settings';
 import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
 import {getChainAssetInfo} from '../../utils/blockchain-utils';
+import {validateAssetId, validateBlockchainId, validateHex} from '../../utils/validators';
 
 enum TOKEN_TYPE {
   BASE,
@@ -63,7 +64,7 @@ export async function addWrappedAsset() {
           type: 'input',
           name: 'tokenName',
           message: 'Token name (Symbol) (From 4 to 16 bytes, 1 character can take up to 4 bytes)',
-          validate: input => 4 <= input.length && input.length <= 8,
+          validate: input => 4 <= input.length && input.length <= 16,
         },
         {
           type: 'input',
@@ -107,6 +108,7 @@ export async function addWrappedAsset() {
 
     const assetId = issueTsResult.stateChanges.issues[0].assetId;
     console.log(clc.green('New asset is added'), assetId)
+    Store.setLastValue(LAST_KEY.ASSET_ID, assetId)
     return addNativeAsset(assetId);
   } catch (e) {
     handleInterrupt(e)
@@ -125,18 +127,23 @@ export async function addNativeAsset(assetIdArg?: string) {
           type: 'input',
           name: 'assetId',
           message: 'Asset id',
+          validate: validateAssetId,
           when: () => !assetIdArg,
-          default: assetIdArg
+          default: assetIdArg || Store.getLastValue(LAST_KEY.ASSET_ID)
         },
         {
           type: 'input',
           name: 'tokenSource',
           message: 'Token source (1 to 4 symbols)',
+          default: Store.getLastValue(LAST_KEY.ASSET_SOURCE),
+          validate: validateBlockchainId
         },
         {
           type: 'input',
           name: 'tokenSourceAddress',
           message: 'Token source address (hex starts with 0x)',
+          default: Store.getLastValue(LAST_KEY.ASSET_SOURCE_ADDRESS),
+          validate: validateHex
         },
         {
           type: 'number',
@@ -144,6 +151,8 @@ export async function addNativeAsset(assetIdArg?: string) {
           message: 'Min fee (float)',
         }
       ]);
+    Store.setLastValue(LAST_KEY.ASSET_SOURCE, tokenSource);
+    Store.setLastValue(LAST_KEY.ASSET_SOURCE_ADDRESS, tokenSourceAddress);
 
     const assetInfo = await getChainAssetInfo(assetId);
 
@@ -220,6 +229,7 @@ async function addBaseAsset() {
     ])
 
     await sendInvokeScript(params)
+    Store.setLastValue(LAST_KEY.ASSET_ID, '6scFjhFGDfpmYySMKQ9vDbZuH8aMRWsUQJAHXzm1FsJo')
   } catch (e) {
     handleInterrupt(e);
   }

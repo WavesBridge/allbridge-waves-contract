@@ -9,7 +9,7 @@ import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {setValidatorAddress} from '../settings/settings';
 import * as inquirer from 'inquirer';
 import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
-import {validateHex} from '../../utils/validators';
+import {validateHex, validateOracle} from '../../utils/validators';
 
 export async function setOracle() {
   try {
@@ -26,7 +26,7 @@ export async function setOracle() {
           type: 'input',
           name: 'oraclePublicKey',
           message: 'Full oracle public key (hex)',
-          validate: validateHex
+          validate: validateOracle
         },
       ]);
 

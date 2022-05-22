@@ -102,11 +102,14 @@ export async function setNetwork(fast = false) {
           {name: `Mainnet (${NODE[CHAIN_ID.MAINNET]})`, value: {address: NODE[CHAIN_ID.MAINNET], chainId: CHAIN_ID.MAINNET}},
           {name: `Testnet (${NODE[CHAIN_ID.TESTNET]})`, value: {address: NODE[CHAIN_ID.TESTNET], chainId: CHAIN_ID.TESTNET}},
           {name: `Stagenet (${NODE[CHAIN_ID.STAGENET]})`, value: {address: NODE[CHAIN_ID.STAGENET], chainId: CHAIN_ID.STAGENET}},
-          {name: '..', value: '..'},
+          '..',
           new Separator()
         ]
       }
     ]).catch(handleInterrupt);
+  if (node === '..') {
+    return
+  }
 
   if (node) {
     Store.node = node;

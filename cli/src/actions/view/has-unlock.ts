@@ -2,6 +2,7 @@ import {setBridgeAddress} from '../settings/settings';
 import {displayArgs, handleInterrupt} from '../../utils/utils';
 import * as inquirer from 'inquirer';
 import {hasUnlockInfo} from '../../utils/blockchain-utils';
+import {validateBlockchainId, validateLockId} from '../../utils/validators';
 
 export async function hasUnlock() {
   try {
@@ -14,11 +15,13 @@ export async function hasUnlock() {
           type: 'input',
           name: 'lockId',
           message: 'Lock id',
+          validate: validateLockId
         },
         {
           type: 'input',
           name: 'lockSource',
           message: 'Lock source (1 - 4 symbols)',
+          validate: validateBlockchainId
         },
       ]);
 

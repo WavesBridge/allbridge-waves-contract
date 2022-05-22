@@ -10,7 +10,7 @@ import {Store} from '../../store';
 import * as inquirer from 'inquirer';
 import {setBridgeAddress, setValidatorAddress} from '../settings/settings';
 import {sendInvokeScript} from '../../utils/send-utils';
-import {validateAddress, validateHex} from '../../utils/validators';
+import {validateAddress, validateHex, validateOracle} from '../../utils/validators';
 
 export async function initValidator() {
   try {
@@ -36,13 +36,14 @@ export async function initValidator() {
           type: 'input',
           name: 'oraclePublicKey',
           message: 'Full oracle public key (hex)',
-          validate: validateHex
+          validate: validateOracle
         },
         {
           type: 'number',
           name: 'validatorVersion',
           message: 'Validator version',
-          default: 1
+          default: 1,
+          validate: (input: number) => Number.isInteger(input) && 1 <= input && input <= 255
         }
       ]);
 

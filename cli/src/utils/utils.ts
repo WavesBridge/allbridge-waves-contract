@@ -53,7 +53,7 @@ export async function displayArgs(message: string, args: { key: string, value: s
   for (const {key, value} of args) {
     new CLI.Line()
       .column((' ').repeat(maxKeyLength - key.length + 2) + key, maxKeyLength + 4,)
-      .column((value ?? '').toString(), maxValueLength, [clc.cyan]).output();
+      .column((value ?? '').toString(), undefined, [clc.cyan]).output();
   }
   console.log()
   if (needConfirm) {
@@ -66,19 +66,6 @@ export async function displayArgs(message: string, args: { key: string, value: s
     if (!confirm) {
       throw EVENT_INTERRUPTED
     }
-  }
-}
-
-export function getTxUrl(txId: string): string {
-  switch (Store.node.chainId) {
-    case CHAIN_ID.TESTNET:
-      return `https://new.wavesexplorer.com/transactions/${txId}?network=testnet`
-    case CHAIN_ID.MAINNET:
-      return `https://new.wavesexplorer.com/transactions/${txId}`
-    case CHAIN_ID.STAGENET:
-      return `https://new.wavesexplorer.com/transactions/${txId}?network=stagenet`
-    default:
-      return txId
   }
 }
 

@@ -4,6 +4,7 @@ import {Store} from '../../store';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {setBridgeAddress} from '../settings/settings';
 import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
+import {getRawBridgeInfo} from '../../utils/blockchain-utils';
 
 export async function setBaseFeeRate() {
   try {
@@ -11,6 +12,7 @@ export async function setBaseFeeRate() {
       await setBridgeAddress()
     }
     const signer = await getCurrentUser();
+    const bridgeInfo = await getRawBridgeInfo();
     const {
       baseFeeRate
     } = await inquirer
@@ -18,7 +20,8 @@ export async function setBaseFeeRate() {
         {
           type: 'number',
           name: 'baseFeeRate',
-          message: 'Base fee rate %'
+          message: 'Base fee rate %',
+          default: bridgeInfo.baseFeeRateBP / 100
         }
       ]);
     const baseFeeRateBp = Math.floor(baseFeeRate * 100);
