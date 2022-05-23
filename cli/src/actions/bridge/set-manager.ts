@@ -20,10 +20,11 @@ export async function setManager() {
           type: 'list',
           name: 'managerType',
           message: 'Select manager type',
-          choices: [{name: 'Bridge manager', value: 'BRIDGE_MANAGER'}, {
-            name: 'Asset manager',
-            value: 'ASSET_MANAGER'
-          }, {name: 'Stop manager', value: 'STOP_MANAGER'}, new Separator()]
+          choices: [
+            {name: 'Bridge manager', value: 'BRIDGE_MANAGER'},
+            {name: 'Asset manager', value: 'ASSET_MANAGER'},
+            {name: 'Stop manager', value: 'STOP_MANAGER'}, new Separator()
+          ]
         },
         {
           type: 'input',

@@ -35,7 +35,7 @@ export async function addAsset() {
           {name: 'Wrapped', value: TOKEN_TYPE.WRAPPED},
           {name: `Native ${clc.white('(or previously deployed wrapped)')}`, value: TOKEN_TYPE.NATIVE},
           {name: 'Base', value: TOKEN_TYPE.BASE},
-          {name: '..', value: TOKEN_TYPE.EXIT},
+          '..',
           new Separator()
         ]
       }]
@@ -58,7 +58,7 @@ export async function addWrappedAsset() {
     const signer = await getCurrentUser();
     await setBridgeAddress(true)
 
-    const {tokenName, tokenDescription, precision} = await inquirer
+    const {tokenName, tokenDescription = '', precision} = await inquirer
       .prompt([
         {
           type: 'input',
@@ -77,7 +77,7 @@ export async function addWrappedAsset() {
           type: 'number',
           name: 'precision',
           message: 'Token precision (Number of decimal places, from 0 to 8)',
-          validate: input => 0 <= input && input <= 8,
+          validate: input => 0 <= input && input <= 8 && Number.isInteger(input),
           default: 8
         }
       ]);
@@ -88,7 +88,7 @@ export async function addWrappedAsset() {
         function: "issue",
         args: [
           {type: 'string', value: tokenName},
-          {type: 'string', value: tokenDescription || ''},
+          {type: 'string', value: tokenDescription},
           {type: 'integer', value: precision},
         ]
       },
@@ -149,6 +149,7 @@ export async function addNativeAsset(assetIdArg?: string) {
           type: 'number',
           name: 'minFeeFloat',
           message: 'Min fee (float)',
+          validate: v => !isNaN(v)
         }
       ]);
     Store.setLastValue(LAST_KEY.ASSET_SOURCE, tokenSource);
@@ -202,7 +203,8 @@ async function addBaseAsset() {
         {
           type: 'number',
           name: 'minFeeFloat',
-          message: 'Min fee (float)'
+          message: 'Min fee (float)',
+          validate: v => !isNaN(v)
         }
       ]);
     const minFeeInt = toInt(minFeeFloat, 8);

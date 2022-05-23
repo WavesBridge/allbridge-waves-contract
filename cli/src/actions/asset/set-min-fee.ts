@@ -35,6 +35,7 @@ export async function setMinFee() {
           type: 'input',
           name: 'minFeeFloat',
           message: 'Min fee (float)',
+          validate: v => !isNaN(v)
         },
       ]);
     Store.setLastValue(LAST_KEY.ASSET_ID, assetId);

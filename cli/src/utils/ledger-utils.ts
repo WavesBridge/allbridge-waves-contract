@@ -48,6 +48,7 @@ export async function ledgerSign(data: Uint8Array, chainId: CHAIN_ID, userId: nu
     return signature;
   } catch (e) {
     spinner.stop();
-    console.log('Transaction was rejected')
+    console.log(clc.red('Transaction was rejected'))
+    throw new Error('Transaction was rejected')
   }
 }

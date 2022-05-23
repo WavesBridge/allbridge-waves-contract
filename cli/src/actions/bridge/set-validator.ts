@@ -19,7 +19,7 @@ export async function setValidator() {
     }
     const signer = await getCurrentUser();
 
-    await displayArgs('You are going to set bridge validator', [
+    await displayArgs('You are going to set bridge validator (You can change validator address in settings)', [
       {key: "Node", value: `${Store.node.address} (${chainIdToName(Store.node.chainId)})`},
       {key: "Bridge", value: Store.bridgeAddress},
       {key: "Validator", value: Store.validatorAddress},

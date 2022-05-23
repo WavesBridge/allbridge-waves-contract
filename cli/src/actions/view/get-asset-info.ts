@@ -50,7 +50,7 @@ async function getBySource() {
           name: 'tokenSource',
           message: 'Token source (1 to 4 symbols)',
           validate: validateBlockchainId,
-          default: Store.getLastValue(LAST_KEY.ASSET_SOURCE_ADDRESS)
+          default: Store.getLastValue(LAST_KEY.ASSET_SOURCE)
         },
         {
           type: 'input',

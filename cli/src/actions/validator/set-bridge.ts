@@ -29,7 +29,7 @@ export async function setValidatorBridge() {
     const params: IInvokeScriptParams = {
       dApp: Store.validatorAddress,
       call: {
-        function: "setAdmin",
+        function: "setBridge",
         args: [
           {type:'binary', value: base58ToBase64(Store.bridgeAddress)},
         ]
