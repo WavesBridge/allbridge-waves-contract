@@ -1,5 +1,4 @@
 import {
-  base58ToBase64,
   chainIdToName,
   displayArgs,
   handleInterrupt,
@@ -10,7 +9,7 @@ import {Store} from '../../store';
 import * as inquirer from 'inquirer';
 import {setBridgeAddress, setValidatorAddress} from '../settings/settings';
 import {sendInvokeScript} from '../../utils/send-utils';
-import {validateAddress, validateHex, validateOracle} from '../../utils/validators';
+import {validateAddress, validateOracle} from '../../utils/validators';
 
 export async function initValidator() {
   try {
@@ -61,9 +60,9 @@ export async function initValidator() {
       call: {
         function: 'init',
         args: [
-          {type: 'binary', value: base58ToBase64(adminAddress)},
+          {type: 'string', value: adminAddress},
           {type: 'binary', value: Buffer.from([validatorVersion]).toString('base64')},
-          {type: 'binary', value: base58ToBase64(Store.bridgeAddress)},
+          {type: 'string', value: Store.bridgeAddress},
           {type: 'binary', value: hexToBase64(oraclePublicKey)}]
       }
     }

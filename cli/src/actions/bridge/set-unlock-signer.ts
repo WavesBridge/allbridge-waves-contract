@@ -3,45 +3,44 @@ import {
   displayArgs,
   handleInterrupt,
 } from '../../utils/utils';
+import * as inquirer from 'inquirer';
 import {Store} from '../../store';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
-import {setValidatorAddress} from '../settings/settings';
-import * as inquirer from 'inquirer';
+import {setBridgeAddress} from '../settings/settings';
 import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
 import {validateAddress} from '../../utils/validators';
 
-export async function setAdmin() {
+export async function setUnlockSigner() {
   try {
-    if (!Store.validatorAddress) {
-      await setValidatorAddress()
+    if (!Store.bridgeAddress) {
+      await setBridgeAddress()
     }
     const signer = await getCurrentUser();
-
     const {
-      adminAddress
+      unlockSigner
     } = await inquirer
       .prompt([
         {
           type: 'input',
-          name: 'adminAddress',
-          message: 'Admin address',
+          name: 'unlockSigner',
+          message: 'Unlock signer address',
           validate: validateAddress
         }
       ]);
 
-    await displayArgs('You are going to set admin address', [
+    await displayArgs('You are going to set bridge unlock signer address', [
       {key: "Node", value: `${Store.node.address} (${chainIdToName(Store.node.chainId)})`},
-      {key: "Validator", value: Store.validatorAddress},
-      {key: "Admin address", value: adminAddress},
+      {key: "Bridge", value: Store.bridgeAddress},
+      {key: "Unlock signer", value: unlockSigner},
       {key: "Signer", value: signer.address},
     ])
 
     const params: IInvokeScriptParams = {
-      dApp: Store.validatorAddress,
+      dApp: Store.bridgeAddress,
       call: {
-        function: "setAdmin",
+        function: "setUnlockSigner",
         args: [
-          {type:'string', value: adminAddress},
+          {type:'string', value: unlockSigner},
         ]
       }
     }

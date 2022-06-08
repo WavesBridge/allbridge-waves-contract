@@ -55,6 +55,12 @@ func assertCallerIsManager(i: Invocation, managerType: String) = {
     }
 }
 
+func assertCallerIsContract(i: Invocation) = {
+   if (this.bytes != i.caller.bytes)
+        then throw(errUnauthorized)
+        else unit
+}
+
 func assertBridgeIsActive() = {
     if (!getBoolean(keyIsActive).valueOrElse(false)) 
         then throw(errBridgeDisabled)
@@ -73,7 +79,7 @@ func assertAssetIsActive(assetIdStr: String) = {
 func getFee(amount: Int, assetIdStr: String) = {
     let baseFeeRateBP = getInteger(keyBaseFeeRateBP).valueOrErrorMessage(errUninitialized)
     let minFee = getInteger(assetIdStr + keyAssetMinFee).valueOrErrorMessage(errAssetNotFound)
-    let fee = amount * baseFeeRateBP / BP
+    let fee = fraction(amount, baseFeeRateBP, BP)
     if (fee < minFee) then minFee else fee
 }
 
@@ -99,21 +105,22 @@ func toSystemPrecision(amount: Int, precision: Int) = {
 }
 
 func fromSystemPrecision(amount: Int, precision: Int) = {
-        pow10(amount, precision - systemPrecision)
+    pow10(amount, precision - systemPrecision)
 }
 
 @Callable(i)
-func init(admin: ByteVector, validatorAddress: ByteVector, feeCollector: ByteVector, unlockSigner: ByteVector, baseFeeRateBP: Int) = {
+func init(admin: String, validatorAddress: String, feeCollector: String, unlockSigner: String, baseFeeRateBP: Int) = {
+    strict callerCheck = i.assertCallerIsContract()
     # Can be called only once
     if (getBinary(BRIDGE_MANAGER + keyManager).isDefined())
         then throw(errInitialized)
         else 
 
     [
-        BinaryEntry(BRIDGE_MANAGER + keyManager, admin),
-        BinaryEntry(keyValidator, validatorAddress),
-        BinaryEntry(keyFeeCollector, feeCollector),
-        BinaryEntry(keyUnlockSigner, unlockSigner),
+        BinaryEntry(BRIDGE_MANAGER + keyManager, admin.addressFromStringValue().bytes),
+        BinaryEntry(keyValidator, validatorAddress.addressFromStringValue().bytes),
+        BinaryEntry(keyFeeCollector, feeCollector.addressFromStringValue().bytes),
+        BinaryEntry(keyUnlockSigner, unlockSigner.addressFromStringValue().bytes),
         IntegerEntry(keyBaseFeeRateBP, baseFeeRateBP),
         BooleanEntry(keyIsActive, true)
     ]
@@ -165,7 +172,7 @@ func issue(name: String, description: String, precision: Int) = {
 @Callable(i)
 func removeAsset(
     assetSourceAndAddress: ByteVector,  # First 4 bytes are token source, then up to 32 byte address
-    newAuthority: ByteVector
+    newAuthority: String
 ) = {
     strict callerCheck = i.assertCallerIsManager(ASSET_MANAGER)
 
@@ -178,13 +185,13 @@ func removeAsset(
         # Transfer all WAVES to ne authority
         let balance = wavesBalance(this)
         if (balance.available > 0)
-            then [ScriptTransfer(Address(newAuthority), balance.available, unit)]
+            then [ScriptTransfer(newAuthority.addressFromStringValue(), balance.available, unit)]
             else []
     } else if (type == typeNative) then {
         # Transfer all assets to new authority
         let balance = assetBalance(this, assetId)
         if (balance > 0) 
-            then [ScriptTransfer(Address(newAuthority), balance, assetId)]
+            then [ScriptTransfer(newAuthority.addressFromStringValue(), balance, assetId)]
             else []
     } else if (type == typeWrapped) then {
         # Chenge asset issuer (impossible)
@@ -251,7 +258,7 @@ func lock(lockId: ByteVector, recipient: ByteVector, destination: ByteVector) = 
 
 @Callable(i)
 func unlock(lockId: ByteVector,
-    recipient: ByteVector,
+    recipient: String,
     amount: Int,
     lockSource: ByteVector,
     assetSourceAndAddress: ByteVector,
@@ -269,7 +276,7 @@ func unlock(lockId: ByteVector,
 
     strict createUnlock = invoke(Address(validatorAddress), "createUnlock", [
         lockId, 
-        recipient, 
+        recipient.addressFromStringValue().bytes,
         amount, 
         lockSource, 
         assetSourceAndAddress, 
@@ -293,36 +300,42 @@ func unlock(lockId: ByteVector,
     } else
 
     if (type == typeBase) then {
-        [ScriptTransfer(Address(recipient), amountToSendWithoutFee, unit)] ++
+        [ScriptTransfer(recipient.addressFromStringValue(), amountToSendWithoutFee, unit)] ++
         if (fee > 0) then [ScriptTransfer(Address(feeCollector), fee, unit)] else []
     } else if (type == typeNative) then {
-        [ScriptTransfer(Address(recipient), amountToSendWithoutFee, assetId)] ++
+        [ScriptTransfer(recipient.addressFromStringValue(), amountToSendWithoutFee, assetId)] ++
         if (fee > 0) then [ScriptTransfer(Address(feeCollector), fee, assetId)] else []
     } else if (type == typeWrapped) then {
         [
             Reissue(assetId, amountToSend, true),
-            ScriptTransfer(Address(recipient), amountToSendWithoutFee, assetId)
+            ScriptTransfer(recipient.addressFromStringValue(), amountToSendWithoutFee, assetId)
         ] ++
         if (fee > 0) then [ScriptTransfer(Address(feeCollector), fee, assetId)] else []
     } else throw(errInvalidValues)
 }
 
 @Callable(i)
-func setManager(managerType: String, manager: ByteVector) = {
+func setManager(managerType: String, manager: String) = {
     strict callerCheck = i.assertCallerIsManager(BRIDGE_MANAGER)
-    [BinaryEntry(managerType + keyManager, manager)]
+    [BinaryEntry(managerType + keyManager, manager.addressFromStringValue().bytes)]
 }
 
 @Callable(i)
-func setFeeCollector(feeCollector: ByteVector) = {
+func setFeeCollector(feeCollector: String) = {
     strict callerCheck = i.assertCallerIsManager(BRIDGE_MANAGER)
-    [BinaryEntry(keyFeeCollector, feeCollector)]
+    [BinaryEntry(keyFeeCollector, feeCollector.addressFromStringValue().bytes)]
 }
 
 @Callable(i)
-func setValidator(validator: ByteVector) = {
+func setValidator(validator: String) = {
     strict callerCheck = i.assertCallerIsManager(BRIDGE_MANAGER)
-    [BinaryEntry(keyValidator, validator)]
+    [BinaryEntry(keyValidator, validator.addressFromStringValue().bytes)]
+}
+
+@Callable(i)
+func setUnlockSigner(unlockSigner: String) = {
+    strict callerCheck = i.assertCallerIsManager(BRIDGE_MANAGER)
+    [BinaryEntry(keyUnlockSigner, unlockSigner.addressFromStringValue().bytes)]
 }
 
 @Callable(i)

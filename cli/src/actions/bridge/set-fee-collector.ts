@@ -1,5 +1,4 @@
 import {
-  base58ToBase64,
   chainIdToName,
   displayArgs,
   handleInterrupt,
@@ -9,7 +8,7 @@ import {Store} from '../../store';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 import {setBridgeAddress} from '../settings/settings';
 import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
-import {validateAddress, validateAssetId} from '../../utils/validators';
+import {validateAddress} from '../../utils/validators';
 
 export async function setFeeCollector() {
   try {
@@ -41,7 +40,7 @@ export async function setFeeCollector() {
       call: {
         function: "setFeeCollector",
         args: [
-          {type:'binary', value: base58ToBase64(feeCollector)},
+          {type:'string', value: feeCollector},
         ]
       }
     }

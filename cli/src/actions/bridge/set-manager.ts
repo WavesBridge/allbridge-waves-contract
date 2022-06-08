@@ -1,7 +1,6 @@
 import * as inquirer from 'inquirer';
 import {Store} from '../../store';
 import {
-  base58ToBase64,
   chainIdToName,
   displayArgs,
   handleInterrupt
@@ -48,7 +47,7 @@ export async function setManager() {
         function: 'setManager',
         args: [
           {type: 'string', value: managerType},
-          {type: 'binary', value: base58ToBase64(managerAddress)}
+          {type: 'string', value: managerAddress}
         ]
       }
     }

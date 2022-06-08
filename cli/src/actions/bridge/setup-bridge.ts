@@ -6,12 +6,14 @@ import {setFeeCollector} from './set-fee-collector';
 import {setValidator} from './set-validator';
 import {startBridge} from './start-bridge';
 import {stopBridge} from './stop-bridge';
+import {setUnlockSigner} from './set-unlock-signer';
 
 enum BRIDGE_ACTION {
   INIT,
   SET_MANAGER,
   SET_FEE_COLLECTOR,
   SET_VALIDATOR,
+  SET_UNLOCK_SIGNER,
   START_BRIDGE,
   STOP_BRIDGE
 }
@@ -28,6 +30,7 @@ export async function setupBridge() {
           {name: 'Set manager', value: BRIDGE_ACTION.SET_MANAGER},
           {name: 'Set fee collector', value: BRIDGE_ACTION.SET_FEE_COLLECTOR},
           {name: 'Set validator', value: BRIDGE_ACTION.SET_VALIDATOR},
+          {name: 'Set unlock signer', value: BRIDGE_ACTION.SET_UNLOCK_SIGNER},
           {name: 'Start bridge', value: BRIDGE_ACTION.START_BRIDGE},
           {name: 'Stop bridge', value: BRIDGE_ACTION.STOP_BRIDGE},
           '..',
@@ -46,6 +49,8 @@ export async function setupBridge() {
       return setFeeCollector()
     case BRIDGE_ACTION.SET_VALIDATOR:
       return setValidator()
+    case BRIDGE_ACTION.SET_UNLOCK_SIGNER:
+      return setUnlockSigner()
     case BRIDGE_ACTION.START_BRIDGE:
       return startBridge()
     case BRIDGE_ACTION.STOP_BRIDGE:

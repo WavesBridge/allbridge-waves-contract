@@ -56,7 +56,7 @@ export async function sendSetScript(params: ISetScriptParams): Promise<any> {
     version,
     senderPublicKey: publicKey,
     chainId: Store.node.chainId,
-    fee: fee(params, 1000000),
+    fee: fee(params, 1500000),
     feeAssetId: null,
     timestamp: params.timestamp || Date.now(),
     proofs: [],

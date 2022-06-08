@@ -1,5 +1,4 @@
 import {
-  base58ToBase64,
   chainIdToName,
   displayArgs,
   handleInterrupt,
@@ -31,7 +30,7 @@ export async function setValidatorBridge() {
       call: {
         function: "setBridge",
         args: [
-          {type:'binary', value: base58ToBase64(Store.bridgeAddress)},
+          {type:'string', value: Store.bridgeAddress},
         ]
       }
     }

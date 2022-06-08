@@ -1,5 +1,4 @@
 import {
-  base58ToBase64,
   chainIdToName,
   displayArgs,
   handleInterrupt,
@@ -31,7 +30,7 @@ export async function setValidator() {
       call: {
         function: "setValidator",
         args: [
-          {type:'binary', value: base58ToBase64(Store.validatorAddress)},
+          {type:'string', value: Store.validatorAddress},
         ]
       }
     }

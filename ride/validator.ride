@@ -31,6 +31,11 @@ func assertCaller(i: Invocation, key: String) = {
         case _ => throw(errUninitialized)
     }
 }
+func assertCallerIsContract(i: Invocation) = {
+   if (this.bytes != i.caller.bytes)
+        then throw(errUnauthorized)
+        else unit
+}
 
 func assertCallerIsBridge(i: Invocation) = assertCaller(i, keyBridge)
 func assertCallerIsAdmin(i: Invocation) = assertCaller(i, keyAdmin)
@@ -51,14 +56,15 @@ func assertLockNotExists(lockRecipientKey: String) = {
 }
 
 @Callable(i)
-func init(admin: ByteVector, version: ByteVector, bridge: ByteVector, oracle: ByteVector) = {
+func init(admin: String, version: ByteVector, bridge: String, oracle: ByteVector) = {
+    strict callerCheck = i.assertCallerIsContract()
     if (getBinary(keyAdmin).isDefined())  # Can be called only once
         then throw(errUnauthorized) 
         else [
             BinaryEntry(keyVersion, version),
-            BinaryEntry(keyBridge, bridge),
+            BinaryEntry(keyBridge, bridge.addressFromStringValue().bytes),
             BinaryEntry(keyOracle, oracle),
-            BinaryEntry(keyAdmin, admin)
+            BinaryEntry(keyAdmin, admin.addressFromStringValue().bytes)
         ]
 }
 
@@ -128,19 +134,19 @@ func createLock(
 }
 
 @Callable(i)
-func setAdmin(newAdmin: ByteVector) = {
+func setAdmin(newAdmin: String) = {
     strict checkCaller = assertCallerIsAdmin(i)
-    [BinaryEntry(keyAdmin, newAdmin)]
+    [BinaryEntry(keyAdmin, newAdmin.addressFromStringValue().bytes)]
 }
 
 @Callable(i)
-func setOracle(newOracle: ByteVector) = {
+func setOracle(newOracle: String) = {
     strict checkCaller = assertCallerIsAdmin(i)
-    [BinaryEntry(keyOracle, newOracle)]
+    [BinaryEntry(keyOracle, newOracle.addressFromStringValue().bytes)]
 }
 
 @Callable(i)
-func setBridge(newBridge: ByteVector) = {
+func setBridge(newBridge: String) = {
     strict checkCaller = assertCallerIsAdmin(i)
-    [BinaryEntry(keyBridge, newBridge)]
+    [BinaryEntry(keyBridge, newBridge.addressFromStringValue().bytes)]
 }

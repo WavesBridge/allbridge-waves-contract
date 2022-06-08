@@ -53,7 +53,7 @@ async function decryptKey(data: string, fast = false) {
       {
         type: 'password',
         name: 'password',
-        message: 'Write a password from the account key file',
+        message: 'Write a password for the account key file',
         validate(password) {
           try {
             Waves.seedUtils.decryptSeed(Buffer.from(data, 'base64').toString(), password);

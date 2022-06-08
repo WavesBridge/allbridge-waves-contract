@@ -66,11 +66,11 @@ async function initValidatorContract(oracle) {
         dApp: address(accounts.validator),
         functionName: 'init',
         arguments: [
-            {type: 'binary', value: accountSeedToBase64(accounts.admin)},
+            {type: 'string', value: address(accounts.admin)},
             [1],
-            {type: 'binary', value: accountSeedToBase64(accounts.bridge)},
+            {type: 'string', value: address(accounts.bridge)},
             {type: 'binary', value: oraclePublicKey}]
-    }, accounts.admin);
+    }, accounts.validator);
     await waitForTx(initTx.id);
     return oracle;
 }
@@ -83,12 +83,12 @@ async function initBridgeContract() {
     const initTx = await invoke({
         dApp: address(accounts.bridge),
         functionName: 'init',
-        arguments: [{type: 'binary', value: accountSeedToBase64(accounts.admin)},
-            {type: 'binary', value: accountSeedToBase64(accounts.validator)},
-            {type: 'binary', value: accountSeedToBase64(accounts.feeCollector)},
-            {type: 'binary', value: accountSeedToBase64(accounts.unlockSigner)},
+        arguments: [{type: 'string', value: address(accounts.admin)},
+            {type: 'string', value: address(accounts.validator)},
+            {type: 'string', value: address(accounts.feeCollector)},
+            {type: 'string', value: address(accounts.unlockSigner)},
             {type: 'integer', value: 30}],
-    }, accounts.admin)
+    }, accounts.bridge)
     await waitForTx(initTx.id);
     await setManager('ASSET_MANAGER', accounts.admin);
     await setManager('STOP_MANAGER', accounts.admin);
@@ -131,7 +131,7 @@ async function setManager(managerType, seed, sender) {
         functionName: 'setManager',
         arguments: [
             {type: 'string', value: managerType},
-            {type: 'binary', value: accountSeedToBase64(seed)}
+            {type: 'string', value: address(seed)}
         ]
     }, sender)
 }
@@ -198,15 +198,15 @@ function lock(recipient, destination, amount, lockId, sender) {
 function unlock(amount, lockSource, tokenSourceAndAddress, oracle, lockId, recipient, signature, sender) {
     lockId = lockId || generateLockId();
     sender = sender || accounts.alice;
-    recipient = recipient || accountSeedToBase64(accounts.alice);
-    signature = signature || getSignature(lockId, recipient, amount, lockSource, tokenSourceAndAddress, oracle)
+    recipient = recipient || address(accounts.alice);
+    signature = signature || getSignature(lockId, base58ToBase64(recipient), amount, lockSource, tokenSourceAndAddress, oracle)
 
     return invokeAndWait({
         dApp: address(accounts.bridge),
         functionName: 'unlock',
         arguments: [
             {type:'binary', value: lockId},
-            {type:'binary', value: recipient},
+            {type:'string', value: recipient},
             {type:'integer', value: amount},
             {type:'binary', value: lockSource},
             {type:'binary', value: tokenSourceAndAddress},
@@ -254,14 +254,14 @@ async function issueAsset(precision = 8) {
 
 async function removeAsset(source, newOwner, sender) {
     sender = sender || accounts.admin;
-    newOwner = newOwner || base58ToBase64(address(accounts.newOwner));
+    newOwner = newOwner || address(accounts.newOwner);
 
     return invokeAndWait({
         dApp: address(accounts.bridge),
             functionName: "removeAsset",
             arguments: [
                 {type:'binary', value: source},
-                {type:'binary', value: newOwner},
+                {type:'string', value: newOwner},
             ]
     }, sender)
 }
@@ -284,7 +284,18 @@ async function setFeeCollector(feeCollectorSeed, sender) {
         dApp: address(accounts.bridge),
         functionName: "setFeeCollector",
         arguments: [
-            {type:'binary', value: accountSeedToBase64(feeCollectorSeed)},
+            {type:'string', value: address(feeCollectorSeed)},
+        ]
+    }, sender)
+}
+
+async function setUnlockSigner(unlockSigner, sender) {
+    sender = sender || accounts.admin;
+    return invokeAndWait({
+        dApp: address(accounts.bridge),
+        functionName: "setUnlockSigner",
+        arguments: [
+            {type:'string', value: address(unlockSigner)},
         ]
     }, sender)
 }
@@ -295,7 +306,7 @@ async function setValidator(validatorSeed, sender) {
         dApp: address(accounts.bridge),
         functionName: "setValidator",
         arguments: [
-            {type:'binary', value: accountSeedToBase64(validatorSeed)},
+            {type:'string', value: address(validatorSeed)},
         ]
     }, sender)
 }
@@ -368,5 +379,6 @@ module.exports = {
     startBridge,
     stopBridge,
     setFeeCollector,
-    setBaseFeeRate
+    setBaseFeeRate,
+    setUnlockSigner
 }

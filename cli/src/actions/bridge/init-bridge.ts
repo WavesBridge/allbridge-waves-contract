@@ -1,5 +1,4 @@
 import {
-  base58ToBase64,
   chainIdToName,
   displayArgs,
   handleInterrupt,
@@ -9,7 +8,7 @@ import {Store} from '../../store';
 import * as inquirer from 'inquirer';
 import {setBridgeAddress, setValidatorAddress} from '../settings/settings';
 import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
-import {validateAddress, validateAssetId} from '../../utils/validators';
+import {validateAddress} from '../../utils/validators';
 
 export async function initBridge() {
   try {
@@ -64,10 +63,10 @@ export async function initBridge() {
       dApp: Store.bridgeAddress,
       call: {
         function: 'init',
-        args: [{type: 'binary', value: base58ToBase64(bridgeManager)},
-          {type: 'binary', value: base58ToBase64(Store.validatorAddress)},
-          {type: 'binary', value: base58ToBase64(feeCollector)},
-          {type: 'binary', value: base58ToBase64(unlockSigner)},
+        args: [{type: 'string', value: bridgeManager},
+          {type: 'string', value: Store.validatorAddress},
+          {type: 'string', value: feeCollector},
+          {type: 'string', value: unlockSigner},
           {type: 'integer', value: baseFeeRateBp}],
       }
     }

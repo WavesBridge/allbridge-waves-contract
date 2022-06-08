@@ -1,6 +1,7 @@
 const {accountSeedToBase64, toWavelet, initBridgeContract,
     setManager, base64Normalize, getManager, setFeeCollector, setValidator, startBridge, stopBridge,
-    addAsset, removeAsset, setMinFee, setBaseFeeRate, setAssetState, issueAsset, getTokenInfo
+    addAsset, removeAsset, setMinFee, setBaseFeeRate, setAssetState, issueAsset, getTokenInfo, setUnlockSigner,
+    invokeAndWait
 } = require('./utils');
 
 const BASE_ASSET_SOURCE_AND_ADDRESS = "V0FWRVdBVkUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
@@ -30,6 +31,18 @@ describe('Manager', async function () {
         await initBridgeContract();
         await addAsset(BASE_ASSET_ID, BASE_ASSET_SOURCE_AND_ADDRESS, FEE);
     });
+
+    it ('set manager invalid address', async () => {
+        const result = invokeAndWait({
+            dApp: address(accounts.bridge),
+            functionName: 'setManager',
+            arguments: [
+                {type: 'string', value: 'BRIDGE_MANAGER'},
+                {type: 'string', value: 'someinvaliddata'}
+            ]
+        }, accounts.admin);
+        await expect(result).rejectedWith("Error while executing account-script: value() called on unit value on function 'addressFromString' call")
+    })
 
     it('set bridge manager', async function () {
         const managerType = 'BRIDGE_MANAGER';
@@ -119,6 +132,13 @@ describe('Manager', async function () {
     it('setFeeCollector', async () => {
         await setFeeCollector(accounts.alice);
         const recordSource = await accountDataByKey(`_fc`, address(accounts.bridge));
+        expect(base64Normalize(recordSource.value)).equal(accountSeedToBase64(accounts.alice));
+        await setValidator(accounts.feeCollector);
+    })
+
+    it('setUnlockSigner', async () => {
+        await setUnlockSigner(accounts.alice);
+        const recordSource = await accountDataByKey(`_us`, address(accounts.bridge));
         expect(base64Normalize(recordSource.value)).equal(accountSeedToBase64(accounts.alice));
         await setValidator(accounts.feeCollector);
     })

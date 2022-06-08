@@ -5,9 +5,6 @@ const {
 
 describe('Validator', async function () {
 
-    let ADMIN = '';
-    let ALICE = '';
-    let BRIDGE = '';
     let ORACLE;
 
     before(async function () {
@@ -18,10 +15,6 @@ describe('Validator', async function () {
             admin: toWavelet(0.05),
             alice: toWavelet(0.05),
         })
-
-        ADMIN = accountSeedToBase64(accounts.admin);
-        ALICE = accountSeedToBase64(accounts.alice);
-        BRIDGE = accountSeedToBase64(accounts.bridge);
         ORACLE = await initValidatorContract(Buffer.from('0312ed38d39c522cf6b00dd4e60e1e9f99939fe3944d7fe737abdb80399ae54f', 'hex'))
         console.log('Config set');
     });
@@ -198,14 +191,14 @@ describe('Validator', async function () {
             await invokeAndWait({
                 dApp: address(accounts.validator),
                 functionName: 'setAdmin',
-                arguments: [{type: 'binary', value: ALICE}]
+                arguments: [{type: 'string', value: address(accounts.alice)}]
             }, accounts.admin);
 
             {
                 const tx = invokeAndWait({
                     dApp: address(accounts.validator),
                     functionName: 'setOracle',
-                    arguments: [{type: 'binary', value: ALICE}]
+                    arguments: [{type: 'string', value: address(accounts.alice)}]
                 }, accounts.admin);
                 await expect(tx).rejectedWith('unauthorized');
             }
@@ -214,7 +207,7 @@ describe('Validator', async function () {
                 const tx = invokeAndWait({
                     dApp: address(accounts.validator),
                     functionName: 'setBridge',
-                    arguments: [{type: 'binary', value: ALICE}]
+                    arguments: [{type: 'string', value: address(accounts.alice)}]
                 }, accounts.admin);
                 await expect(tx).rejectedWith('unauthorized');
             }
@@ -223,7 +216,7 @@ describe('Validator', async function () {
                 const tx = invokeAndWait({
                     dApp: address(accounts.validator),
                     functionName: 'setAdmin',
-                    arguments: [{type: 'binary', value: ADMIN}]
+                    arguments: [{type: 'string', value: address(accounts.admin)}]
                 }, accounts.admin);
                 await expect(tx).rejectedWith('unauthorized');
             }
@@ -231,27 +224,27 @@ describe('Validator', async function () {
             await invokeAndWait({
                 dApp: address(accounts.validator),
                 functionName: 'setAdmin',
-                arguments: [{type: 'binary', value: ADMIN}]
+                arguments: [{type: 'string', value: address(accounts.admin)}]
             }, accounts.alice);
 
             {
                 await invokeAndWait({
                     dApp: address(accounts.validator),
                     functionName: 'setOracle',
-                    arguments: [{type: 'binary', value: ALICE}]
+                    arguments: [{type: 'string', value: address(accounts.alice)}]
                 }, accounts.admin);
                 const data = await accountDataByKey(`_o`, address(accounts.validator));
-                expect(base64Normalize(data.value)).equal(ALICE)
+                expect(base64Normalize(data.value)).equal(accountSeedToBase64(accounts.alice))
             }
 
             {
                 await invokeAndWait({
                     dApp: address(accounts.validator),
                     functionName: 'setBridge',
-                    arguments: [{type: 'binary', value: ALICE}]
+                    arguments: [{type: 'string', value: address(accounts.alice)}]
                 }, accounts.admin);
                 const data = await accountDataByKey(`_b`, address(accounts.validator));
-                expect(base64Normalize(data.value)).equal(ALICE)
+                expect(base64Normalize(data.value)).equal(accountSeedToBase64(accounts.alice))
             }
 
         })

@@ -85,7 +85,7 @@ describe('Assets', async function () {
         it ('fail: bridge stopped', async () => {
             await stopBridge();
             const result = lock(recipient, destination, amount)
-            await expect(result).to.be.rejectedWith("birdge is disabled");
+            await expect(result).to.be.rejectedWith("bridge is disabled");
             await startBridge();
         })
 
@@ -224,7 +224,7 @@ describe('Assets', async function () {
         it ('fail: bridge stopped', async () => {
             await stopBridge();
             const result = unlock(amount, lockSource, BASE_ASSET_SOURCE_AND_ADDRESS, ORACLE);
-            await expect(result).to.be.rejectedWith("birdge is disabled");
+            await expect(result).to.be.rejectedWith("bridge is disabled");
             await startBridge();
         })
 
