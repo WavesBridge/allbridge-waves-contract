@@ -140,9 +140,9 @@ func setAdmin(newAdmin: String) = {
 }
 
 @Callable(i)
-func setOracle(newOracle: String) = {
+func setOracle(newOracle: ByteVector) = {
     strict checkCaller = assertCallerIsAdmin(i)
-    [BinaryEntry(keyOracle, newOracle.addressFromStringValue().bytes)]
+    [BinaryEntry(keyOracle, newOracle)]
 }
 
 @Callable(i)

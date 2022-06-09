@@ -228,13 +228,14 @@ describe('Validator', async function () {
             }, accounts.alice);
 
             {
+                const newOracle = 'AWJgMbimgkbqRMNx34IitA=='
                 await invokeAndWait({
                     dApp: address(accounts.validator),
                     functionName: 'setOracle',
-                    arguments: [{type: 'string', value: address(accounts.alice)}]
+                    arguments: [{type: 'binary', value: newOracle}]
                 }, accounts.admin);
                 const data = await accountDataByKey(`_o`, address(accounts.validator));
-                expect(base64Normalize(data.value)).equal(accountSeedToBase64(accounts.alice))
+                expect(base64Normalize(data.value)).equal(newOracle)
             }
 
             {
