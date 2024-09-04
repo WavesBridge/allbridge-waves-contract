@@ -161,7 +161,7 @@ export async function addNativeAsset(assetIdArg?: string) {
     const minFeeInt = Math.floor(minFeeFloat * Math.pow(10, assetInfo.decimals));
 
     const assetIdB64 = base58ToBase64(assetId);
-    await displayArgs('You are going to issue new wrapped token', [
+    await displayArgs('You are going to issue new native token', [
       {key: "Node", value: `${Store.node.address} (${chainIdToName(Store.node.chainId)})`},
       {key: "Bridge", value: Store.bridgeAddress},
       {key: "Token name", value: assetInfo.name},
