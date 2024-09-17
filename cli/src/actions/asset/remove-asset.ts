@@ -60,7 +60,7 @@ export async function removeAsset() {
         function: 'removeAsset',
         args: [
           {type: 'binary', value: assetSourceAndAddress},
-          {type: 'binary', value: base58ToBase64(newOwner)},
+          {type: 'string', value: newOwner},
         ]
       },
     };
