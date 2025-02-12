@@ -10,6 +10,7 @@ if (
   i.caller != this 
   && i.caller != Address(base58'3PEcrtnjM337CJ48pjFuPCfsYLmCztwYoMx') 
   && i.caller != Address(base58'3P8qVX189qpoTJZQQQdKS9endHK5sxWsvrd')
+  && i.caller != Address(base58'3PKHFX6W4aAr1e1b8MUTz5HmdWVUcjWhgY4')
   ) 
 then throw("access only by stop manager") else 
 {
