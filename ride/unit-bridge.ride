@@ -1,0 +1,202 @@
+{-# STDLIB_VERSION 5 #-}
+{-# CONTENT_TYPE DAPP #-}
+{-# SCRIPT_TYPE ACCOUNT #-}
+
+let keyAssetAddress = "_aa"
+let keyAssetType = "_at"
+let keyAssetPrecision = "_ap"
+let keyAssetMinFee = "_amf"
+let keyAssetDisabledFee = "_adf"
+
+let keyBaseFeeRateBP = "_bfr"
+
+let keyUnitBridge = "_ub"
+let keyFeeCollector = "_fc"
+let keyAdmin = "_a"
+
+let baseAssetSourceAndAddress = base64'V0FWRVdBVkUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'   # 0x57415645 5741564500000000000000000000000000000000000000000000000000000000
+let baseAssetId = base64'V0FWRQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=' # 0x5741564500000000000000000000000000000000000000000000000000000000
+
+let chainWaves = base64'V0FWRQ==' # 0x57415645
+
+let BP = 10000
+
+let errUnauthorized = "unauthorized"
+let errUninitialized = "uninitialized"
+let errInitialized = "initialized"
+let errAlreadyExists = "exists"
+let errNotExists = "not exists"
+let errInvalidValues = "invalid values"
+let errNotOnePayment = "not one payment"
+let errAssetNotFound = "asset not found"
+let errNotEnoughBalance = "not enough balance"
+
+let typeBase = 0
+let typeNative = 1
+
+func assertCallerIsAdmin(i: Invocation) = {
+    match getBinary(keyAdmin) {
+        case authority: ByteVector => if (authority != i.caller.bytes) 
+            then throw(errUnauthorized) 
+            else unit
+        case _ => throw(errUninitialized)
+    }
+}
+
+func assertCallerIsContract(i: Invocation) = {
+   if (this.bytes != i.caller.bytes)
+        then throw(errUnauthorized)
+        else unit
+}
+
+func getFee(amount: Int, assetIdStr: String) = {
+    let isDisabledFee = getBoolean(assetIdStr + keyAssetDisabledFee).valueOrElse(false)
+    if (isDisabledFee)
+        then 0
+    else {
+        let baseFeeRateBP = getInteger(keyBaseFeeRateBP).valueOrErrorMessage(errUninitialized)
+        let minFee = getInteger(assetIdStr + keyAssetMinFee).valueOrErrorMessage(errAssetNotFound)
+        let fee = fraction(amount, baseFeeRateBP, BP)
+        if (fee < minFee) then minFee else fee
+    }
+}
+
+@Callable(i)
+func init(admin: String, unitBridgeAddress: String, feeCollector: String, baseFeeRateBP: Int) = {
+    strict callerCheck = i.assertCallerIsContract()
+    # Can be called only once
+    if (getBinary(keyAdmin).isDefined())
+        then throw(errInitialized)
+        else 
+
+    [
+        BinaryEntry(keyAdmin, admin.addressFromStringValue().bytes),
+        BinaryEntry(keyUnitBridge, unitBridgeAddress.addressFromStringValue().bytes),
+        BinaryEntry(keyFeeCollector, feeCollector.addressFromStringValue().bytes),
+        IntegerEntry(keyBaseFeeRateBP, baseFeeRateBP)
+    ]
+}
+
+@Callable(i)
+func addAsset(
+    assetSourceAndAddress: ByteVector,  # First 4 bytes are token source, then up to 32 byte address
+    assetId: ByteVector,
+    minFee: Int) = {
+
+    strict callerCheck = i.assertCallerIsAdmin()
+
+    let (type, precision) = if (assetId == baseAssetId) then {
+        if (assetSourceAndAddress != baseAssetSourceAndAddress) 
+            then throw(errInvalidValues)
+            else (typeBase, 8)
+    } else {
+        let asset = assetInfo(assetId).valueOrErrorMessage(errAssetNotFound)
+        (typeNative, asset.decimals)
+    }
+    
+    let assetIdStr = toBase64String(assetId)
+
+    let keySourceAddress = assetSourceAndAddress.toBase64String() + keyAssetAddress
+    let keyNativeAddress = assetIdStr + keyAssetAddress
+
+    if (getBinary(keySourceAddress).isDefined() || getBinary(keyNativeAddress).isDefined())
+        then throw(errAlreadyExists)
+        else 
+
+    [
+        BinaryEntry(keySourceAddress, assetId),
+        BinaryEntry(keyNativeAddress, assetSourceAndAddress),
+        IntegerEntry(assetIdStr + keyAssetType, type),
+        IntegerEntry(assetIdStr + keyAssetPrecision, precision),
+        IntegerEntry(assetIdStr + keyAssetMinFee, minFee),
+        BooleanEntry(assetIdStr + keyAssetDisabledFee, false)
+    ]
+}
+
+@Callable(i)
+func removeAsset(
+    assetSourceAndAddress: ByteVector,  # First 4 bytes are token source, then up to 32 byte address
+) = {
+    strict callerCheck = i.assertCallerIsAdmin()
+
+    let keySourceAddress = assetSourceAndAddress.toBase64String() + keyAssetAddress
+    let assetId = getBinary(keySourceAddress).valueOrErrorMessage(errNotExists)
+    let assetIdStr = toBase64String(assetId)
+    
+    actions ++ [
+        DeleteEntry(keySourceAddress),
+        DeleteEntry(assetIdStr + keyAssetAddress),
+        DeleteEntry(assetIdStr + keyAssetType),
+        DeleteEntry(assetIdStr + keyAssetPrecision),
+        DeleteEntry(assetIdStr + keyAssetMinFee),
+        DeleteEntry(assetIdStr + keyAssetDisabledFee)
+    ]
+}
+
+@Callable(i)
+func lock(recipient: String) = {
+    if (i.payments.size() != 1)
+        then throw(errNotOnePayment) 
+        else 
+    let assetId = valueOrElse(i.payments[0].assetId, baseAssetId)
+    let assetIdStr = assetId.toBase64String()
+
+    let amount = i.payments[0].amount
+    let unitBridgeAddress = getBinary(keyUnitBridge).valueOrErrorMessage(errUninitialized)
+    let fee = getFee(amount, assetIdStr)
+    let amountWithoutFee = amount - fee;
+    if (amountWithoutFee <= 0) then {
+        throw(errNotEnoughBalance)
+    } else
+
+    let assetSourceAndAddress = getBinary(assetIdStr + keyAssetAddress).valueOrErrorMessage(errAssetNotFound)
+    let type = getInteger(assetIdStr + keyAssetType).valueOrErrorMessage(errAssetNotFound)
+    let precision = getInteger(assetIdStr + keyAssetPrecision).valueOrErrorMessage(errAssetNotFound)
+    let feeCollector = getBinary(keyFeeCollector).valueOrErrorMessage(errUninitialized)
+
+    strict createLock = invoke(Address(unitBridgeAddress), "transfer", [recipient], [AttachedPayment(i.payments[0].assetId, amountWithoutFee)])
+
+    if (type == typeBase) then {
+        [ScriptTransfer(Address(feeCollector), fee, unit)]
+    } else if (type == typeNative) then {
+        [ScriptTransfer(Address(feeCollector), fee, assetId)]
+    } else throw(errInvalidValues)
+}
+
+@Callable(i)
+func setAdmin(admin: String) = {
+    strict callerCheck = i.assertCallerIsAdmin()
+    [BinaryEntry(keyAdmin, admin.addressFromStringValue().bytes)]
+}
+
+@Callable(i)
+func setFeeCollector(feeCollector: String) = {
+    strict callerCheck = i.assertCallerIsAdmin()
+    [BinaryEntry(keyFeeCollector, feeCollector.addressFromStringValue().bytes)]
+}
+
+@Callable(i)
+func setUnitBridge(unitBridge: String) = {
+    strict callerCheck = i.assertCallerIsAdmin()
+    [BinaryEntry(keyUnitBridge, unitBridge.addressFromStringValue().bytes)]
+}
+
+@Callable(i)
+func setMinFee(assetId: ByteVector, minFee: Int) = {
+    strict callerCheck = i.assertCallerIsAdmin()
+    let assetIdStr = assetId.toBase64String()
+    [IntegerEntry(assetIdStr + keyAssetMinFee, minFee)]
+}
+
+@Callable(i)
+func setDisabledFee(assetId: ByteVector, value: Boolean) = {
+    strict callerCheck = i.assertCallerIsAdmin()
+    let assetIdStr = assetId.toBase64String()
+    [BooleanEntry(assetIdStr + keyAssetDisabledFee, value)]
+}
+
+@Callable(i)
+func setBaseFeeRate(baseFeeRateBP: Int) = {
+    strict callerCheck = i.assertCallerIsAdmin()
+    [IntegerEntry(keyBaseFeeRateBP, baseFeeRateBP)]
+}

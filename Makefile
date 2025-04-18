@@ -1,5 +1,7 @@
 build-bridge:
 	surfboard compile bridge.ride
+build-unit-bridge:
+	surfboard compile unit-bridge.ride
 start-node:
 	npm run prepare-test
 test-bridge:

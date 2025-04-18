@@ -1,24 +1,18 @@
 import * as inquirer from 'inquirer';
 import {LAST_KEY, Store} from '../../store';
-import {
-  base58ToBase64,
-  chainIdToName,
-  displayArgs,
-  handleInterrupt,
-  tokenSourceAndAddressToWavesSource,
-} from '../../utils/utils';
-import {setBridgeAddress} from '../settings/settings';
+import {chainIdToName, displayArgs, handleInterrupt, tokenSourceAndAddressToWavesSource,} from '../../utils/utils';
+import {setUnitBridgeAddress} from '../settings/settings';
 import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
-import {validateAddress, validateBlockchainId, validateHex} from '../../utils/validators';
+import {validateBlockchainId, validateHex} from '../../utils/validators';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
 
 export async function removeAsset() {
   try {
-    if (!Store.bridgeAddress) {
-      await setBridgeAddress()
+    if (!Store.unitBridgeAddress) {
+      await setUnitBridgeAddress()
     }
     const signer = await getCurrentUser();
-    const {tokenSource, tokenSourceAddress, newOwner} = await inquirer
+    const {tokenSource, tokenSourceAddress} = await inquirer
       .prompt([
         {
           type: 'input',
@@ -33,12 +27,6 @@ export async function removeAsset() {
           message: 'Token source address (hex starts with 0x)',
           validate: validateHex,
           default: Store.getLastValue(LAST_KEY.ASSET_SOURCE_ADDRESS)
-        },
-        {
-          type: 'input',
-          name: 'newOwner',
-          message: 'Write new owner address',
-          validate: validateAddress
         }
       ]);
 
@@ -46,7 +34,7 @@ export async function removeAsset() {
 
     await displayArgs('You are going to remove asset', [
       {key: "Node", value: `${Store.node.address} (${chainIdToName(Store.node.chainId)})`},
-      {key: "Bridge", value: Store.bridgeAddress},
+      {key: "Unit bridge", value: Store.unitBridgeAddress},
       {key: "Token source", value: tokenSource},
       {key: "Token source address", value: tokenSourceAddress},
       {key: "Token source and address", value: assetSourceAndAddress},
@@ -55,12 +43,11 @@ export async function removeAsset() {
 
 
     const params: IInvokeScriptParams = {
-      dApp: Store.bridgeAddress,
+      dApp: Store.unitBridgeAddress,
       call: {
         function: 'removeAsset',
         args: [
-          {type: 'binary', value: assetSourceAndAddress},
-          {type: 'binary', value: base58ToBase64(newOwner)},
+          {type: 'binary', value: assetSourceAndAddress}
         ]
       },
     };
