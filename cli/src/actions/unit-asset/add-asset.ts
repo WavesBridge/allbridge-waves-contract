@@ -10,8 +10,7 @@ import {
   tokenSourceAndAddressToWavesSource
 } from '../../utils/utils';
 import {IInvokeScriptParams} from '@waves/waves-transactions/src/transactions';
-import clc from 'cli-color';
-import {setupAssets} from './setup-assets';
+import {setupUnitAssets} from './setup-assets';
 import {setUnitBridgeAddress} from '../settings/settings';
 import {getCurrentUser, sendInvokeScript} from '../../utils/send-utils';
 import {getChainAssetInfo} from '../../utils/blockchain-utils';
@@ -31,7 +30,7 @@ export async function addAsset() {
         name: 'tokenType',
         message: 'Select token type',
         choices: [
-          {name: `Native ${clc.white('(or previously deployed wrapped)')}`, value: TOKEN_TYPE.NATIVE},
+          {name: `Native`, value: TOKEN_TYPE.NATIVE},
           {name: 'Base', value: TOKEN_TYPE.BASE},
           '..',
           new Separator()
@@ -45,7 +44,7 @@ export async function addAsset() {
     case TOKEN_TYPE.NATIVE:
       return addNativeAsset()
     default:
-      return setupAssets()
+      return setupUnitAssets()
   }
 }
 

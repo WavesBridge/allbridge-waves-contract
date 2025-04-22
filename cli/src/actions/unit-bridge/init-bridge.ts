@@ -46,7 +46,6 @@ export async function initBridge() {
     await displayArgs('You are going to init bridge', [
       {key: "Node", value: `${Store.node.address} (${chainIdToName(Store.node.chainId)})`},
       {key: "Proxy bridge address", value: Store.unitBridgeAddress},
-      {key: "Validator", value: Store.validatorAddress},
       {key: "Bridge admin", value: admin},
       {key: "Fee collector address", value: feeCollector},
       {key: "Unit contract address to proxy", value: unitBridgeAddress},

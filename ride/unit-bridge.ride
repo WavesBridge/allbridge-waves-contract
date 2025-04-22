@@ -115,7 +115,7 @@ func addAsset(
 
 @Callable(i)
 func removeAsset(
-    assetSourceAndAddress: ByteVector,  # First 4 bytes are token source, then up to 32 byte address
+    assetSourceAndAddress: ByteVector  # First 4 bytes are token source, then up to 32 byte address
 ) = {
     strict callerCheck = i.assertCallerIsAdmin()
 
@@ -123,7 +123,7 @@ func removeAsset(
     let assetId = getBinary(keySourceAddress).valueOrErrorMessage(errNotExists)
     let assetIdStr = toBase64String(assetId)
     
-    actions ++ [
+    [
         DeleteEntry(keySourceAddress),
         DeleteEntry(assetIdStr + keyAssetAddress),
         DeleteEntry(assetIdStr + keyAssetType),
@@ -199,4 +199,13 @@ func setDisabledFee(assetId: ByteVector, value: Boolean) = {
 func setBaseFeeRate(baseFeeRateBP: Int) = {
     strict callerCheck = i.assertCallerIsAdmin()
     [IntegerEntry(keyBaseFeeRateBP, baseFeeRateBP)]
+}
+
+@Verifier(tx)
+func verify() = {
+    match tx {
+        case ttx:SetScriptTransaction => false
+		case ttx:DataTransaction => false
+		case _ => sigVerify(tx.bodyBytes, tx.proofs[0], tx.senderPublicKey)
+    }
 }

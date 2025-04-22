@@ -27,6 +27,7 @@ export async function setupUnitAssets() {
           {name: 'Remove asset', value: ASSET_ACTION.REMOVE_ASSET},
           {name: 'Set min fee', value: ASSET_ACTION.SET_MIN_FEE},
           {name: 'Set base fee rate', value: ASSET_ACTION.SET_BASE_FEE_RATE},
+          {name: 'Set disabled fee', value: ASSET_ACTION.SET_DISABLED_FEE},
           '..',
           new Separator()
         ]
