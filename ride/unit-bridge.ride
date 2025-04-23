@@ -205,7 +205,7 @@ func setBaseFeeRate(baseFeeRateBP: Int) = {
 func verify() = {
     match tx {
         case ttx:SetScriptTransaction => false
-		case ttx:DataTransaction => false
-		case _ => sigVerify(tx.bodyBytes, tx.proofs[0], tx.senderPublicKey)
+        case ttx:DataTransaction => false
+        case _ => sigVerify(tx.bodyBytes, tx.proofs[0], tx.senderPublicKey)
     }
 }
