@@ -5,6 +5,7 @@ import {validateAddress} from '../../utils/validators';
 
 enum SETTINGS_ACTION {
   BRIDGE,
+  UNIT_BRIDGE,
   VALIDATOR,
   NETWORK
 }
@@ -24,6 +25,7 @@ export async function settings() {
         message: 'What do you want to change?',
         choices: [
           {name: 'Set bridge address', value: SETTINGS_ACTION.BRIDGE},
+          {name: 'Set unit bridge address', value: SETTINGS_ACTION.UNIT_BRIDGE},
           {name: 'Set validator address', value: SETTINGS_ACTION.VALIDATOR},
           {name: 'Set network', value: SETTINGS_ACTION.NETWORK},
           '..',
@@ -35,6 +37,8 @@ export async function settings() {
   switch (action) {
     case SETTINGS_ACTION.BRIDGE:
       return await setBridgeAddress();
+    case SETTINGS_ACTION.UNIT_BRIDGE:
+      return await setUnitBridgeAddress();
     case SETTINGS_ACTION.VALIDATOR:
       return await setValidatorAddress();
     case SETTINGS_ACTION.NETWORK:
@@ -61,6 +65,28 @@ export async function setBridgeAddress(fast = false) {
       ]);
 
     Store.bridgeAddress = bridgeAddress;
+  } catch (e) {
+    handleInterrupt(e)
+  }
+}
+
+export async function setUnitBridgeAddress(fast = false) {
+  if (fast && Store.bridgeAddress) {
+    return
+  }
+  try {
+    const {unitBridgeAddress} = await inquirer
+      .prompt([
+        {
+          type: 'input',
+          name: 'unitBridgeAddress',
+          message: 'Specify a unit bridge address',
+          validate: validateAddress,
+          default: Store.unitBridgeAddress
+        }
+      ]);
+
+    Store.unitBridgeAddress = unitBridgeAddress;
   } catch (e) {
     handleInterrupt(e)
   }

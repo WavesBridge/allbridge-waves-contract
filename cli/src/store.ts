@@ -6,6 +6,7 @@ enum KEY {
   LEDGER_USER_ID = 'id',
   USE_LEDGER = 'useLedger',
   BRIDGE_ADDRESS = 'bridgeAddress',
+  UNIT_BRIDGE_ADDRESS = 'unitBridgeAddress',
   VALIDATOR_ADDRESS = 'validatorAddress',
   KEY_FILE_ADDRESS = 'keyFileAddress'
 }
@@ -75,6 +76,14 @@ export class Store {
 
   static get bridgeAddress(): string | undefined {
     return config.get(KEY.BRIDGE_ADDRESS)
+  }
+
+  static set unitBridgeAddress(value: string) {
+    config.set(KEY.UNIT_BRIDGE_ADDRESS, value)
+  }
+
+  static get unitBridgeAddress(): string | undefined {
+    return config.get(KEY.UNIT_BRIDGE_ADDRESS)
   }
 
   static set validatorAddress(value: string) {

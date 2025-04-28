@@ -13,6 +13,8 @@ import {setupValidator} from './actions/validator/setup-validator';
 import {view} from './actions/view/view';
 import {printLogo} from './logo';
 import {IntrList} from './utils/interrupted-list';
+import {setupUnitAssets} from './actions/unit-asset/setup-assets';
+import {setupUnitBridge} from './actions/unit-bridge/setup-bridge';
 
 InterruptedPrompt.replaceAllDefaults(inquirer);
 inquirer.registerPrompt('file-tree-selection', FileTreeSelectionPrompt)
@@ -22,7 +24,9 @@ inquirer.registerPrompt('list', IntrList);
 enum START_ACTION {
     AUTH,
     SETUP_ASSETS,
+    SETUP_UNIT_ASSETS,
     SETUP_BRIDGE,
+    SETUP_UNIT_BRIDGE,
     SETUP_VALIDATOR,
     DEPLOY,
     VIEW,
@@ -40,7 +44,9 @@ async function start() {
                   choices: [
                       {name: 'Auth', value: START_ACTION.AUTH},
                       {name: 'Setup Assets', value: START_ACTION.SETUP_ASSETS},
+                      {name: 'Setup Unit Assets', value: START_ACTION.SETUP_UNIT_ASSETS},
                       {name: 'Setup Bridge', value: START_ACTION.SETUP_BRIDGE},
+                      {name: 'Setup Unit Bridge', value: START_ACTION.SETUP_UNIT_BRIDGE},
                       {name: 'Setup Validator', value: START_ACTION.SETUP_VALIDATOR},
                       {name: 'Deploy', value: START_ACTION.DEPLOY},
                       {name: 'View', value: START_ACTION.VIEW},
@@ -60,8 +66,14 @@ async function start() {
             case START_ACTION.SETUP_ASSETS:
                 await setupAssets()
                 break
+            case START_ACTION.SETUP_UNIT_ASSETS:
+                await setupUnitAssets()
+                break
             case START_ACTION.SETUP_BRIDGE:
                 await setupBridge()
+                break
+            case START_ACTION.SETUP_UNIT_BRIDGE:
+                await setupUnitBridge()
                 break
             case START_ACTION.SETUP_VALIDATOR:
                 await setupValidator()
